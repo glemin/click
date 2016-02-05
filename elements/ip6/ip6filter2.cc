@@ -1155,6 +1155,8 @@ parse_brackets(IP6Filter::Primitive& prim, const Vector<String>& words, int pos,
 int
 IP6Filter::Parser::parse_primitive(int position, bool negatedSignSeen)    // parse het test gedeelte uit de grammatica
 {
+    currentWord = _words[position];
+
     // error handling
     if (position >= _words.size())
 	    return position;    /* out of range */
@@ -1175,8 +1177,13 @@ IP6Filter::Parser::parse_primitive(int position, bool negatedSignSeen)    // par
 	    return position + 1;    /* go further in parse_expr_iterative() with the next position */
 	}
 
-    String currentWord = _words[position];
-    Primtive* primitive;
+
+    if (!(position + 1 <= _words.size())) { /* all qualifiers are followed by at least some data */
+        // throw error + return
+        return -10; /* -10 ook nog veranderen */
+    }
+  
+
     if (currentWord == "vers") {
         currentWord = _words[position+1];
         uint32_t versionNumber = atoll(currentWord.c_str());    /* no error handling we might want to use boost::lexical_cast */
@@ -1187,30 +1194,36 @@ IP6Filter::Parser::parse_primitive(int position, bool negatedSignSeen)    // par
         return currentPosition + 2;
     } else if (currentWord == "dscp") {
         currentWord = _words[position + 1];  
-        uint32_t dscpValue = atoll(currentWord.c_str());    /* no error handling we might want to use boost::lexical_cast */
+        uint8_t dscpValue = atoll(currentWord.c_str());    /* no error handling we might want to use boost::lexical_cast */
 
         primitive = new IPDSCPPrimitive();
         primitive.dscpValue = dscpValue;
         
-        return currentPosition + 2;        
+        return currentPosition + 2;
     } else if (currentWord == "ce") {
     
     } else if (currentWord == "ect") {
     
     } else if (currentWord == "flow") {
-	    currentWord = _words[position + 1];
-	    uint32_t flowValue = atoll(currentWord.c_str());
-	     
+        currentWord = _words[position + 1];
+        uint64_t flowValue = atoll(currentWord.c_str());
+	    
+        primitive = new IPFlowLabelPrimitive();
+        primitive.flowLabelValue1 = flowValue;
+        primitive.flowLabelValue2 = flowValue >> 16;
+	    
+        return curentPosition + 2;
     } else if (currentWord == "plen") {
-	    
+        currentWord = _words[position + 1];
+        uint32_t plen = atoll(currentWord.ctr());
     } else if (currentWord == "nxt") {
-	    
+        currentWord = _words[position + 1];    
     } else if (currentWord == "hlim") {
 	    
     } else if (currentWord == "src") {  /* this must be followed by host or net keyword */
 	    
     } else if (currentWord == "dst") {  /* this must be followed by host or net keyword */
-	        
+	    
 	}
 	    
 	
