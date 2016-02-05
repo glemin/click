@@ -1,5 +1,5 @@
 /*
- * ip6filter.{cc,hh} -- IPv6-packet filter with tcpdumplike syntax
+ * ip6filter2.{cc,hh} -- IPv6-packet filter with tcpdumplike syntax
  * Glenn Minne, based on code by Eddie Kohler
  *
  * Copyright (c) 2000-2007 Mazu Networks, Inc.
@@ -29,7 +29,11 @@
 #include <click/integers.hh>
 #include <click/etheraddress.hh>
 #include <click/nameinfo.hh>
+#include <stack>
 CLICK_DECLS
+
+using std::stack;
+
 
 // TODO this list is ordered alphabetically, wouldn't it be better if you order the list based on the specific TYPE????
 // TODO these entries will be added to NameInfo's database system 
@@ -979,15 +983,15 @@ IP6Filter::Parser::parse_expr_iterative(int position)        // Remark: This pos
 
 // zo'n pushdown automaat is in essentie een niet-deterministische eindige automaat met epsilon transities toegestaan en 1 bijkomstige eigenschap: een parseStack waarop het een string van "stack symbolen" kan opslaan.
 {
-    Vector<ParseState> parseStack;
-    parseStack.push_back(ParseState(s_expr0));
+    stack<ParseState> parseStack;
+    parseStack.push(ParseState(s_expr0));
 
     while (parseStack.size()) {
-	    ParseState &parseState = parseStack.back();           // stk.back() returns the last element, the .back() method returns the last element of a vector.
+	    ParseState &parseState = parseStack.pop();
 	    int newStateNumber = -1; // -1 means epsilon in the 'Introduction to automata theory' book
 
     	switch (parseState.stateNumber) { // tells in which state we are
-	        case s_expr0:                           // TODO enkel bij s_expr0 start men en subtree, bij de overige twee s_expr's niet
+            case s_expr0:                           // TODO enkel bij s_expr0 start men en subtree, bij de overige twee s_expr's niet
 	            _program.start_subtree(_tree);      // whenever you start a subtree this means that you are setting up a new &&, ? or || construct or the like              
 	            parseState.stateNumber = s_expr1;                 // TODO dit is de volgende staat die je moet uitproberen als het niet matcht denk ik, bij 0 kan 't nooit matchen denk ik
 	            newStateNumber = s_orexpr0;     // this on the other hand is the new symbol that needs to be pushed on the stack (and has nothing to do with the state we are in) ; if the stack gets empty we need are finished.
@@ -1086,9 +1090,9 @@ IP6Filter::Parser::parse_expr_iterative(int position)        // Remark: This pos
 
 	    if (newStateNumber >= 0) {       // if the encountered state is positive, we need to push back
 	        parseState.lastPosition = position;
-	        parseStack.push_back(ParseState(newStateNumber));
+	        parseStack.push(ParseState(newStateNumber));
 	    } else                      // if the encountered state is negative, we need to pop
-	        parseStack.pop_back();
+	        parseStack.pop();
     }
 
     return position;
@@ -1149,28 +1153,49 @@ parse_brackets(IP6Filter::Primitive& prim, const Vector<String>& words, int pos,
 
 // parse 'test' on encountering it.
 int
-IP6Filter::Parser::parse_primitive(int position, bool negated)    // parse het test gedeelte uit de grammatica
+IP6Filter::Parser::parse_primitive(int position, bool negatedSignSeen)    // parse het test gedeelte uit de grammatica
 {
+    // error handling
     if (position >= _words.size())
-	    return position;
-    String first_word = _words[position];
-    if (first_word == ")" || first_word == "||" || first_word == "or" || first_word == "?" || first_word == ":")
-	    return position;
-
-    // 'true' and 'false'
-    if (first_word == "true") {
-	    _program.add_insn(_tree, 0, 0, 0);     // deze instructie matcht altijd
-	    if (negated)
+	    return position;    /* out of range */
+	if (_words[position] == ")" || _words[position] == "||" || _words[position] == "?" || _words[position] == ":" || _words[position] == "or" )
+	    return position;    /* non-acceptable first word */
+	  
+	// start of parsing
+	if (_words[position] == "true") {
+	    _program.add_insn(_tree, 0, 0, 0);  /* everything matches with mask 0 */
+	    if (negatedSignSeen)
 	        _program.negate_subtree(_tree);
-        return position + 1;
-    }
-
-    if (first_word == "false") {
-	    _program.add_insn(_tree, 0, 0, 0);     // this instruction always matches but... (see below)
-	    if (!negated)
-	        _program.negate_subtree(_tree);    // ... is most often negated.
-	    return position + 1;
-    }
+	    return position + 1;    /* go further in parse_expr_iterative() with the next position */
+	}
+	if (_words[position] == "false") {
+	    _program.add_insn(_tree, 0, 0, 0);  /* everything matches with mask 0 */
+	    if (!negatedSignSeen)               
+	        _program.negate_subtree(_tree);
+	    return position + 1;    /* go further in parse_expr_iterative() with the next position */
+	}
+	for (int i = 0; i < _words.size; i++) {
+	    String currentWord = _words[i];
+	    if (currentWord == "vers") {
+	        
+	    } else if (currentWord == "dscp") {
+	    
+	    } else if (currentWord == "ce") {
+	    
+	    } else if (currentWord == "ect") {
+	    
+	    } else if (currentWord == "flow") {
+	    
+	    } else if (currentWord == "plen") {
+	    
+	    } else if (currentWord == "nxt") {
+	    
+	    } else if (currentWord == "hlim") {
+	    
+	    }
+	}
+	    
+	
 
     // hard case
 
