@@ -1174,25 +1174,43 @@ IP6Filter::Parser::parse_primitive(int position, bool negatedSignSeen)    // par
 	        _program.negate_subtree(_tree);
 	    return position + 1;    /* go further in parse_expr_iterative() with the next position */
 	}
-	for (int i = 0; i < _words.size; i++) {
-	    String currentWord = _words[i];
-	    if (currentWord == "vers") {
+
+    String currentWord = _words[position];
+    Primtive* primitive;
+    if (currentWord == "vers") {
+        currentWord = _words[position+1];
+        uint32_t versionNumber = atoll(currentWord.c_str());    /* no error handling we might want to use boost::lexical_cast */
+        
+        primitive = new IPVersionPrimitive();
+        primitive.versionNumber = versionNumber;
+        
+        return currentPosition + 2;
+    } else if (currentWord == "dscp") {
+        currentWord = _words[position + 1];  
+        uint32_t dscpValue = atoll(currentWord.c_str());    /* no error handling we might want to use boost::lexical_cast */
+
+        primitive = new IPDSCPPrimitive();
+        primitive.dscpValue = dscpValue;
+        
+        return currentPosition + 2;        
+    } else if (currentWord == "ce") {
+    
+    } else if (currentWord == "ect") {
+    
+    } else if (currentWord == "flow") {
+	    currentWord = _words[position + 1];
+	    uint32_t flowValue = atoll(currentWord.c_str());
+	     
+    } else if (currentWord == "plen") {
+	    
+    } else if (currentWord == "nxt") {
+	    
+    } else if (currentWord == "hlim") {
+	    
+    } else if (currentWord == "src") {  /* this must be followed by host or net keyword */
+	    
+    } else if (currentWord == "dst") {  /* this must be followed by host or net keyword */
 	        
-	    } else if (currentWord == "dscp") {
-	    
-	    } else if (currentWord == "ce") {
-	    
-	    } else if (currentWord == "ect") {
-	    
-	    } else if (currentWord == "flow") {
-	    
-	    } else if (currentWord == "plen") {
-	    
-	    } else if (currentWord == "nxt") {
-	    
-	    } else if (currentWord == "hlim") {
-	    
-	    }
 	}
 	    
 	
@@ -1219,12 +1237,12 @@ IP6Filter::Parser::parse_primitive(int position, bool negatedSignSeen)    // par
 	    int wordType = lookup(word, 0, UNKNOWN, wdata, _context, 0);            // TODO waarom ze naar een word type moeten zoeken zie ik niet echt in, lijkt mij misschien een nutteloze operatie, je kan toch gewoon hard coded werken zoals ze doen bij src, gewoon   "else if (wd == "src")", ... enz.
                                                                         // of kijken ze hier naar u header pointers? om bijvoorbeeld te weten wat bepaalde dingen in bepaalde contexten willen zeggen? 't zou mij straf lijken.
 
-	    if (wordType >= 0 && wordType == TYPE_TYPE) {
+	    if (wordType == TYPE_TYPE) {
 	        primitive.set_type(wdata, _errh);
 	        if ((wdata & TYPE_FIELD) && (wdata & FIELD_PROTO_MASK))
 		        primitive.set_transp_proto((wdata & FIELD_PROTO_MASK) >> FIELD_PROTO_SHIFT, _errh);
 
-	    } else if (wordType >= 0 && wordType == TYPE_PROTO)
+	    } else if (wordType == TYPE_PROTO)
 	        primitive.set_transp_proto(wdata, _errh);
 
 	    else if (wordType != -1)
