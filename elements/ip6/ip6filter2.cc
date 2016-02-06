@@ -1185,19 +1185,44 @@ IP6Filter::Parser::parse_primitive(int position, bool negatedSignSeen)    // par
   
 
     if (currentWord == "vers") {
-        currentWord = _words[position+1];
-        uint32_t versionNumber = atoll(currentWord.c_str());    /* no error handling we might want to use boost::lexical_cast */
-        
-        primitive = new IPVersionPrimitive();
-        primitive.versionNumber = versionNumber;
-        
-        return currentPosition + 2;
+        if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
+        || _words[position+1] == "!=") {    /* determine whether an optional ==, >, >=, <=, <, != keyword was used */
+            primitive = new IPVersionPrimitive();
+            primitive->versionNumber = atoll([position+2].c_str());    /* no error handling we might want to use boost::lexical_cast */
+            primitive->compile();
+            
+            return position + 3;
+        } else {            
+            primitive = new IPVersionPrimitive();
+            primitive->versionNumber = atoll([position+1].c_str());    /* no error handling we might want to use boost::lexical_cast */
+            primitive->compile();
+            
+            return position + 2;
+        }
     } else if (currentWord == "dscp") {
+       if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
+        || _words[position+1] == "!=") {    /* determine whether an optional ==, >, >=, <=, <, != keyword was used */
+            primitive = new IPDSCPPrimitive();
+            primitive->dscpValue = atoll([position+2].c_str());
+            primitive->compile();
+            
+            return position + 3;
+        } else {
+            primitive = new IPDSCPPrimitive();
+            primitive->dscpValue = atoll([position+1].c_str());
+            primitive->compile();
+            
+            return position + 2;
+        }
+        
+        
         currentWord = _words[position + 1];  
         uint8_t dscpValue = atoll(currentWord.c_str());    /* no error handling we might want to use boost::lexical_cast */
 
         primitive = new IPDSCPPrimitive();
-        primitive.dscpValue = dscpValue;
+        primitive->dscpValue = dscpValue;
+        
+        primitive->compile();
         
         return currentPosition + 2;
     } else if (currentWord == "ce") {
@@ -1209,10 +1234,12 @@ IP6Filter::Parser::parse_primitive(int position, bool negatedSignSeen)    // par
         uint64_t flowValue = atoll(currentWord.c_str());
 	    
         primitive = new IPFlowLabelPrimitive();
-        primitive.flowLabelValue1 = flowValue;
-        primitive.flowLabelValue2 = flowValue >> 16;
+        primitive->flowLabelValue1 = flowValue;
+        primitive->flowLabelValue2 = flowValue >> 16;
+        
+        primitive->compile();
 	    
-        return curentPosition + 2;
+        return position + 2;
     } else if (currentWord == "plen") {
         currentWord = _words[position + 1];
         uint32_t plen = atoll(currentWord.ctr());
@@ -1221,110 +1248,39 @@ IP6Filter::Parser::parse_primitive(int position, bool negatedSignSeen)    // par
     } else if (currentWord == "hlim") {
 	    
     } else if (currentWord == "src") {  /* this must be followed by host or net keyword */
+        if (_words[position+1] == "host") {
+            
+        } else if (_words[position+1] == "net") {
+            
+        } else {
+            // throw error + return
+            return -10; /* -10 ook nog veranderen */
+        }
 	    
-    } else if (currentWord == "dst") {  /* this must be followed by host or net keyword */
-	    
+    } else if (_words[position] == "dst") {  /* this must be followed by host or net keyword */
+	    if (_words[position+1] == "host") {
+	        primitive = new IPHostPrimitive();
+            if (IP6AddressArg().parse(_words[position + 2], primitive->ip6Address, _context)) {
+                primitive->compile();
+                return position + 3;
+            } else {
+                // throw error + return
+                return -10;
+            }
+        } else if (_words[position+1] == "net") {
+            
+        } else {
+            // throw error + return
+            return -10; /* -10 ook nog veranderen */
+        }    
+	} else if (currentWord == "ether") {    // wellicht 'ether host'
+	
 	}
+	
+	
 	    
 	
 
-    // hard case
-
-    // expect quals [relop] data
-    // (relop is an abbreviation for relation operator, this is something as ==, !=, >=, >, <= or <).
-
-    int startPosition = position;
-    Primitive primitive;
-    int header = 0;         // TODO we start with header = 0 , can it be given a value later on still in this function, that is: before we enter the 'check' function
-
-    // collect qualifiers
-
-    // hier worden de duizenden qualifiers verzameld en allemaal gezet in de primitive
-    // de volgorde waarin die voorkomen lijkt hen niet te boeien, merkwaardig! Niet per se slecht, maar wel merkwaardig!
-
-    // TODO waar wordt de data verzameld die normaal achter de qualifier moet komen?
-
-    for (; position < _words.size(); position++) {  // for each word, do
-	    String word = _words[position];
-	    uint32_t wdata;
-	    int wordType = lookup(word, 0, UNKNOWN, wdata, _context, 0);            // TODO waarom ze naar een word type moeten zoeken zie ik niet echt in, lijkt mij misschien een nutteloze operatie, je kan toch gewoon hard coded werken zoals ze doen bij src, gewoon   "else if (wd == "src")", ... enz.
-                                                                        // of kijken ze hier naar u header pointers? om bijvoorbeeld te weten wat bepaalde dingen in bepaalde contexten willen zeggen? 't zou mij straf lijken.
-
-	    if (wordType == TYPE_TYPE) {
-	        primitive.set_type(wdata, _errh);
-	        if ((wdata & TYPE_FIELD) && (wdata & FIELD_PROTO_MASK))
-		        primitive.set_transp_proto((wdata & FIELD_PROTO_MASK) >> FIELD_PROTO_SHIFT, _errh);
-
-	    } else if (wordType == TYPE_PROTO)
-	        primitive.set_transp_proto(wdata, _errh);
-
-	    else if (wordType != -1)
-	        break;
-
-	    else if (word == "src") {
-	        if (position < _words.size() - 2 && (_words[position+2] == "dst" || _words[position+2] == "dest")) {
-		        if (_words[position+1] == "and" || _words[position+1] == "&&") {
-		            primitive.set_srcdst(SOURCE_AND_DEST, _errh);
-		            position += 2;       // move to the next word ; we have already encountered 'src and'
-		        } else if (_words[position+1] == "or" || _words[position+1] == "||") {
-		            primitive.set_srcdst(SOURCE_OR_DEST, _errh);
-		            position += 2;       // move to the next word ; we have already encountered 'src or'
-		        } else
-		            primitive.set_srcdst(SOURCE, _errh);
-	        } else
-		        primitive.set_srcdst(SOURCE, _errh);
-	    } else if (word == "dst" || word == "dest")     // TODO does this mean that 'dst or src' is not an allowable combination? it seems like that, you need to start your sentence with 'src or' it seems, or am I getting in wrong?
-	        primitive.set_srcdst(DEST, _errh);     // maybe they prevent from resetting this ........ (when it's already set.........)
-
-	    else if (word == "ip" || word == "ether") {
-	        if (header)     // if the header already exists and is as such different from 0, we break
-		        break;
-	        header = word[0]; // otherwise our header will become our first word
-
-	    } else if (word == "not" || word == "!")
-	        negated = !negated;         // whenever you see the not keyword, swap the negated sign. Negations cancel each other out.
-
-	    else
-	        break;
-    }
-
-    // prev_prim is not relevant if there were any qualifiers
-    if (position != startPosition)
-	    _prev_prim.clear();         // and then we need to clear _prev_prim also
-    if (_prev_prim._data == TYPE_ETHER)
-	    header = 'e';
-
-    // optional [] syntax
-    // This optional [] syntax is used for
-    // 'ip[POS:LEN] VALUE' and also for 'transp[POS:LEN] VALUE' constructs    
-    String word = (position >= _words.size() - 1 ? String() : _words[position]);
-    if (word == "[" && position > startPosition && primitive._internalPrimitiveType == TYPE_NONE) {
-	    position = parse_brackets(primitive, _words, position, _errh);
-	    word = (position >= _words.size() - 1 ? String() : _words[position]);
-    }
-
-    // optional bitmask
-
-    // TODO what's the optional bit mask?
-    int mask_dt = 0;
-    PrimitiveData provided_mask;
-    if (word == "&" && position < _words.size() - 1) {     // TODO how does the & word actually work like here, I think I didn't found an example of these sort of & syntax in the documentation.
-	    if (IntArg().parse(_words[position + 1], provided_mask.u)) {
-	        mask_dt = TYPE_INT;                                                 // TODO here we say something is of type TYPE_INT !!
-	        position += 2;
-	    } else if (header != 'e' && IPAddressArg().parse(_words[position + 1], provided_mask.ip4, _context)) { // TODO make IPv6
-	        mask_dt = TYPE_HOST;                                                                            // An IPv6 mask given
-	        position += 2;
-	    } else if (header != 'i' && EtherAddressArg().parse(_words[position + 1], provided_mask.c, _context)) {  // An ethernet mask is given
-	        mask_dt = TYPE_ETHER;
-	        position += 2;
-	    }
-	    if (mask_dt && mask_dt != TYPE_ETHER && !provided_mask.u) {
-	        _errh->error("zero mask ignored");
-	        mask_dt = 0;
-	    }
-	    word = (position >= _words.size() - 1 ? String() : _words[position]);
-    }
 
     // optional relational operation
     position++;                              // TODO after a qualifier word i guess we can start seeing one of these operators below; only with = or == we do not need to change anything. I suppose this is because acting with = is the standard method we are going to use when nothing is given too?
