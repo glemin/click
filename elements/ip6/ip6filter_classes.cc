@@ -76,11 +76,49 @@ IPHostPrimtive::compile(CompressedProgram program) {
         program.add_insn(tree, offset_net + 32, ip6AddressArray[2], 0b11111111111111111111111111111111);
         program.add_insn(tree, offset_net + 36, ip6AddressArray[3], 0b11111111111111111111111111111111);
         program.finish_subtree(tree, Classification::c_and);
-
+        
         program.finish_subtree(tree, Classification::c_or);
 }
 
 IPVersionPrimitive::compile(CompressedProgram program) {
-    
+    program.start_subtree(tree);
+    program.add_insn(tree, offset_net, versionNumber, 0b11110000000000000000000000000000);
+    program.finish_subtree(tree, Classification::c_and);
+}
 
+IPDSCPPrimitive::compile(CompressedProgram program) {
+    program.start_subtree(tree);
+    program.add_insn(tree, offset_net, versionNumber, 0b00001111110000000000000000000000);
+    program.finish_subtree(tree, Classification::c_and);
+}
+
+IPECNPrimitive::compile(CompressedProgram program) {
+    program.start_subtree(tree);
+    program.add_insn(tree, offset_net, dscpValue, 0b00000000001100000000000000000000);
+    program.finish_subtree(tree, Classification::c_and);
+}
+
+IPFlowLabelPrimitive::compile(CompressedProgram program) {
+    program.start_subtree(tree);
+    program.add_insn(tree, offset_net, flowLabelPart1, 0b00000000000000000000000000001111);
+    program.add_insn(tree, offset_net + 1, flowLabelPart2, 0b11111111111111110000000000000000);
+    program.finish_subtree(tree, Classification::c_and);
+}
+
+IPPayloadLengthPrimitive::compile(CompressedProgram program) {
+    program.start_subtree(tree);
+    program.add_insn(tree, offset_net + 1, payloadLength, 0b11111111111111111111111111111111);
+    program.finish_subtree(tree, Classification::c_and);
+}
+
+IPNextHeaderPrimitive::compile(CompressedProgram program) {
+    program.start_subtree(tree);
+    program.add_insn(tree, offset_net + 1, nextHeader, 0b00000000000000001111111100000000);
+    program.finish_subtree(tree, Classification::c_and);    
+}
+
+IPHopLimitPrimitive::compile(CompressedProgram program) {
+    program.start_subtree(tree);
+    program.add_insn(tree, offset_net + 1, nextHeader, 0b00000000000000000000000011111111);
+    program.finish_subtree(tree, Classification::c_and);
 }

@@ -38,44 +38,6 @@ using std::stack;
 // TODO this list is ordered alphabetically, wouldn't it be better if you order the list based on the specific TYPE????
 // TODO these entries will be added to NameInfo's database system 
 
-
-
-
-
-// hulp functie
-// Gaat het type en het protocol vertalen naar een een leesbare string, en plakt daarachter het meegegeven woord.
-
-// TODO why is word passed by reference?
-static String
-unparse_word(int typeNumber, int protocolNumber, const String &word)
-{
-    String typeName = IP6Filter::Primitive::unparse_type(0, typeNumber);
-    String protocolName = IP6Filter::Primitive::unparse_transp_proto(protocolNumber);
-    if (typeName)
-	    typeName += " ";
-    if (protocolName || (word && typeName)) // if word and tyeName were both unempty, we also add the extra space. TODO Why?
-	    protocolName += " ";
-    return typeName + protocolName + word;
-}
-
-// hulp functie lijkt mij
-// deze geeft een getal terug, het teruggegeven getal bepaalt of er een match was of niet
-// je kan onder andere -1 returnen als er geen match is, of ook wel -2 wat wil zeggen dat er ook geen match is maar dat we door alle mogelijkheden heen zijn moeten lopen
-
-// geheugensteuntje: false wordt geconverteerd naar 0, true wordt geconverteerd naar 1
-
-
-/** @Brief Helper function in which we query 5 databases in total to find for the given word. If we find in one of those databases the word, we return the associated number for that word. In the case the word occurs in multiple databases however, we give an error back. When the word wasn't found an error is also returned.    
-    @param word The word where we want to find its official number for
-    @param type The type we are hinting at? TODO
-    @param proto The protocol we are hinting at? TODO
-    @param data TODO why is this given?
-    @param context The compound element that was given as a database query context TODO (I guess)
-    @param errh The Click error handler.
-*/
-
-
-
 // lege constructor
 IP6Filter::IP6Filter()          // TODO do we need to give _transp_proto a default value?
 {
@@ -86,204 +48,8 @@ IP6Filter::~IP6Filter()
 {
 }
 
-//
-// CONFIGURATION
-//
 
-// hiermee maak je een bepaalde primitive leeg
-void
-IP6Filter::Primitive::clear()           // TODO waarom wordt _proto niet gereset?
-{
-    _internalPrimitiveType = _srcdst = 0;
-    _transp_proto = UNKNOWN;
-    _data = 0;
-    _internalOperatorType = OP_EQ;  // TODO the default operator seems to be OP_EQ, there does not seem to be something that indicates that an operator is abscent.
-    _isInternalOperatorInNegatedForm = false;
-}
-
-// hiermee zet je het type vd primitive
-// mogelijke types zijn: ... , ... , ... , ... , ...
-
-
-// TODO wat betekenen de eerste 3 argumenten?
-
-// TODO ik ben er niet helemaal zeker van maar dit lijkt niet alleen de mask te zetten, maar de data ook aan te passen zodat er op de delen waar het masker 0 geeft, er in de data ook effectief een 0 komt te staan.
-
-// TODO what is full mask vs. provided mask?
-int
-IP6Filter::Primitive::set_mask(uint32_t full_mask, int shift, uint32_t provided_mask, ErrorHandler *errh)
-{
-    uint32_t data = _u.u;
-    uint32_t this_mask = (provided_mask ? provided_mask : full_mask);       // TODO should maybe be renamed to mask. We are considering a mask. Normally this is the provided_mask , but in some cases when a provided_mask was not given, this is the boundary mask "full_mask", which states the size of the maximum mask. "full_mask" should maybe be renamed to max_mask.
-// the actual mask should then be a subset of max_mask
-
-    // TODO zie ook het bestand 'example_AND' in /home. Ik vermoed dat we er voor willen zorgen dat de data hetzelfde wordt als de data ge-&'nd met de mask. Dat betekent impliciet dat je op de delen waar het masker 0 had, ook 0 moet hebben staan.
-    // this_mask must not be larger than the full_mask. The test below checks this condition.
-    if ((this_mask & full_mask) != this_mask)      // TODO (nagaan of de uitspraak die hier volgt klopt) full_mask mag meer 1'en hebben dat this_mask denk ik, of mag 
-                                                   // er ook volledig aan gelijk zijn eventueel. In alle andere gevallen is this_mask != full_mask denk ik en dan 
-                                                   // hebben we een error.
-	    return errh->error("%<%s%>: mask out of range, bound 0x%X", unparse_type().c_str(), full_mask);
-
-    if (_internalOperatorType == OP_GT || _internalOperatorType == OP_LT) {
-	    // Check for comparisons that are always true or false.
-	    if ((_internalOperatorType == OP_LT && (data == 0 || data > this_mask)) || (_internalOperatorType == OP_GT && data >= this_mask)) {
-	        bool will_be = (_internalOperatorType == OP_LT && data > this_mask ? !_isInternalOperatorInNegatedForm : _isInternalOperatorInNegatedForm);
-	        errh->warning("relation %<%s %u%> is always %s (range 0-%u)", unparse_op().c_str(), data, (will_be ? "true" : "false"), this_mask);
-	        _u.u = _mask.u = 0;
-	        _isInternalOperatorInNegatedForm = !will_be;
-	        _internalOperatorType = OP_EQ;
-            return 0;
-	    }
-
-        // TODO => why are we doing what is described below?
-
-
-
-    	// value < X == !(value > (X - 1)) 
-
-        // Explanation of the above statement:
-        // value < X == !(value > X) is easy
-        // since we are using natural numbers, also value < X == !(value > (X - 1)). Because if if we only do -1, and we know that the numbers are all 1 apart from each each other, we can have at most that both numbers get equal, and equal is not great than (>).
-
-      	if (_internalOperatorType == OP_LT) {
-    	    _u.u--;         // contains a binary number, we subtract 1 from this binary number
-    	    _isInternalOperatorInNegatedForm = !_isInternalOperatorInNegatedForm;
-      	    _internalOperatorType = OP_GT;
-	    }
-
-	    _u.u = (_u.u << shift) | ((1 << shift) - 1);            // shift to the left and augment with 1s in stead of 0s
-	    _mask.u = (this_mask << shift) | ((1 << shift) - 1);    // shift to the left and augment with 1s in stead of 0s
-    	// Want (_u.u & _mask.u) == _u.u.
-    	// So change 'tcp[0] & 5 > 2' into the equivalent 'tcp[0] & 5 > 1':
-    	// find the highest bit in _u that is not set in _mask,
-    	// and turn on all lower bits.
-    	if ((_u.u & _mask.u) != _u.u) {
-	        uint32_t full_mask_u = (full_mask << shift) | ((1 << shift) - 1);       // ((1 << shift) - 1) will give something that consists entirely of 1's
-                                                                                    // actually we are shifting the full mask and adding 1's in stead of 0's to the right
-	        uint32_t missing_bits = (_u.u & _mask.u) ^ (_u.u & full_mask_u);
-	        uint32_t add_mask = 0xFFFFFFFFU >> ffs_msb(missing_bits);   // ffs_msb -> returns the index of the most significant bit set.
-	        _u.u = (_u.u | add_mask) & _mask.u;
-	    }
-	    return 0;
-    }
-
-    if (data > full_mask)   // this means the data is out of range
-	    return errh->error("%<%s%>: out of range, bound %u", unparse_type().c_str(), full_mask);
-
-    _u.u = data << shift;               // as well the data , as the mask, are possibly shifted before being assigned to the Primitive-class member variables.
-    _mask.u = this_mask << shift;
-    return 0;
-}
-
-//
-//  Here follows a series of unparse functions.
-//
-
-/** @Brief Returns the given internal primitive type number in written form, possibly preceded by a source/destination keyword.
-    @param srcdst A source/destination keyword, which is an integer that indicates whether the internal primitive type was preceded by a source/destination keyword such as 'src' or 'src and dst'
-    @param internalPrimitiveTypeNumber Each Primitive struct has a certain type associated with it. This type is given in a numerical form and this type is translated by this function to written form
-
-*/
-String
-IP6Filter::Primitive::unparse_type(int srcdst, int internalPrimitiveTypeNumber)
-{
-  StringAccum sa;
-
-  switch (srcdst) {
-   case SOURCE: sa << "src "; break;
-   case DEST: sa << "dst "; break;
-   case SOURCE_OR_DEST: sa << "src or dst "; break;
-   case SOURCE_AND_DEST: sa << "src and dst "; break;
-  }
-
-  switch (internalPrimitiveTypeNumber) {
-   case TYPE_NONE: sa << "<none>"; break;
-   case TYPE_HOST: sa << "ip host"; break;
-   case TYPE_PROTO: sa << "proto"; break;
-   case TYPE_ETHER: sa << "ether host"; break;
-   case TYPE_IPFRAG: sa << "ip frag"; break;
-   case TYPE_PORT: sa << "port"; break;
-   case TYPE_TCPOPT: sa << "tcp opt"; break;
-   case TYPE_NET: sa << "ip net"; break;
-   case TYPE_IPUNFRAG: sa << "ip unfrag"; break;
-   case TYPE_IPECT: sa << "ip ect"; break;
-   case TYPE_IPCE: sa << "ip ce"; break;
-   default:
-    if (internalPrimitiveTypeNumber & TYPE_FIELD) {        // hiermee zult ge waarschijnlijk kunnen zien of u TYPE_FIElD gezet is, wat dan ook moge betekenen
-      switch (internalPrimitiveTypeNumber) {               // hier volgen da al die typische veldjes die ge terugvint in een IPv4 adres, en dat zal moeten omgezet worden naar typische veldjes in een IPv6 adres
-       case FIELD_IPLEN: sa << "ip len"; break;
-       case FIELD_ID: sa << "ip id"; break;
-       case FIELD_VERSION: sa << "ip vers"; break;
-       case FIELD_HL: sa << "ip hl"; break;
-       case FIELD_TOS: sa << "ip tos"; break;
-       case FIELD_DSCP: sa << "ip dscp"; break;
-       case FIELD_HLIM: sa << "ip hlim"; break;
-       case FIELD_TCP_WIN: sa << "tcp win"; break;
-       case FIELD_ICMP_TYPE: sa << "icmp type"; break;
-       default:
-	     if (internalPrimitiveTypeNumber & FIELD_PROTO_MASK)     // nog totaal onduidelijk wat dit wil zeggen, maar da zal nog duidelijk worden zeker     
-	       sa << unparse_transp_proto((internalPrimitiveTypeNumber & FIELD_PROTO_MASK) >> FIELD_PROTO_SHIFT);
-	     else
-	       sa << "ip";
-	     sa << "[...]";
-	     break;
-      }
-    } else
-      sa << "<unknown type " << internalPrimitiveTypeNumber << ">";
-    break;
-  }
-
-  return sa.take_string();
-}
-/** @brief Each Primitive struct has possibly a transport layer protocol number associated with it. This function translates this transport layer protocol number to written form.
-@param transp_proto The numerical value that needs to be translated back to its corresponding written form.
-
-*/
-String
-IP6Filter::Primitive::unparse_transp_proto(int transp_proto)
-{
-  switch (transp_proto) {
-   case UNKNOWN: return "";
-   case IP_PROTO_ICMP: return "icmp";       // IP_PROTO_ICMP is macro magic for '1', the IANA ICMP protocol number
-   case IP_PROTO_IGMP: return "igmp";
-   case IP_PROTO_IPIP: return "ipip";
-   case IP_PROTO_TCP: return "tcp";
-   case IP_PROTO_UDP: return "udp";
-   case IP_PROTO_TCP_OR_UDP: return "tcpudp";
-   case IP_PROTO_TRANSP: return "transp";
-   default: return "ip proto " + String(transp_proto); // In this case the transport protocol did not get recognized. We return the written protocol number gently back then.
-  }
-}
-
-/** @Brief Tells which sort of Primitive we have, and whether this Primitive was preceded by a source/dest keyword combination. The output is given in plain text.
-@return The type and source/dest keyword combination, if present, given in plain text.
-*/
-String
-IP6Filter::Primitive::unparse_type() const      // shortcut for unparse_type with two parameters.
-{
-  return unparse_type(_srcdst, _internalPrimitiveType);
-}
-
-/** @Brief Tells which sort of operator the Primitive has, and returns it in plain text.
-@return The operator owned by the leading Primitive, given in plain text.
-
-*/
-String
-IP6Filter::Primitive::unparse_op() const
-{
-  if (_internalOperatorType == OP_GT)
-    return (_isInternalOperatorInNegatedForm ? "<=" : ">");
-  else if (_internalOperatorType == OP_LT)
-    return (_isInternalOperatorInNegatedForm ? ">=" : "<");
-  else
-    return (_isInternalOperatorInNegatedForm ? "!=" : "=");
-}
-
-// Here ends the series of unparse functions.
-
-/** Negates is the negation is found simple. If it was not found simple, an assertion fails.
-
-*/
+/* must be a member of the of the different Primitive types, you can override the function with the alternative version in the IPNextHeaderPrimtive */
 void
 IP6Filter::Primitive::simple_negate()
 {
@@ -293,25 +59,282 @@ IP6Filter::Primitive::simple_negate()
     _transp_proto = (_isInternalOperatorInNegatedForm ? UNKNOWN : _u.i);
 }
 
-/** Some sort of error function?
 
-*/
+
+// parse 'test' on encountering it.
 int
-IP6Filter::Primitive::type_error(ErrorHandler *errh, const char *msg) const
+IP6Filter::Parser::parse_primitive(int position, bool negatedSignSeen)    // parse het test gedeelte uit de grammatica
 {
-    return errh->error("%<%s%>: %s", unparse_type().c_str(), msg);
+    currentWord = _words[position];
+
+    // error handling
+    if (position >= _words.size())
+	    return position;    /* out of range */
+	if (_words[position] == ")" || _words[position] == "||" || _words[position] == "?" || _words[position] == ":" || _words[position] == "or" )
+	    return position;    /* non-acceptable first word */
+	  
+	// start of parsing
+	if (_words[position] == "true") {
+	    _program.add_insn(_tree, 0, 0, 0);  /* everything matches with mask 0 */
+	    if (negatedSignSeen)
+	        _program.negate_subtree(_tree);
+	    return position + 1;    /* go further in parse_expr_iterative() with the next position */
+	}
+	if (_words[position] == "false") {
+	    _program.add_insn(_tree, 0, 0, 0);  /* everything matches with mask 0 */
+	    if (!negatedSignSeen)               
+	        _program.negate_subtree(_tree);
+	    return position + 1;    /* go further in parse_expr_iterative() with the next position */
+	}
+
+
+    if (!(position + 1 <= _words.size())) { /* all qualifiers are followed by at least some data */
+        // throw error + return
+        return -10; /* -10 ook nog veranderen */
+    }
+  
+
+    if (currentWord == "vers") {
+        if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
+        || _words[position+1] == "!=") {    /* determine whether an optional ==, >, >=, <=, <, != keyword was used */
+            primitive = new IPVersionPrimitive();
+            primitive->versionNumber = atoll([position+2].c_str());    /* no error handling we might want to use boost::lexical_cast */
+            primitive->operator_ == _words[position+1];
+            primitive->compile();
+            
+            return position + 3;
+        } else {            
+            primitive = new IPVersionPrimitive();
+            primitive->versionNumber = atoll([position+1].c_str());    /* no error handling we might want to use boost::lexical_cast */
+            primitive->compile();
+            
+            return position + 2;
+        }
+    } else if (currentWord == "dscp") {
+       if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
+        || _words[position+1] == "!=") {    /* determine whether an optional ==, >, >=, <=, <, != keyword was used */
+            primitive = new IPDSCPPrimitive();
+            primitive->dscpValue = atoll([position+2].c_str());
+            primitive->operator_ == _words[position+1];
+            primitive->compile();
+            
+            return position + 3;
+        } else {
+            primitive = new IPDSCPPrimitive();
+            primitive->dscpValue = atoll([position+1].c_str());
+            primitive->compile();
+            
+            return position + 2;
+        }
+        
+        
+        currentWord = _words[position + 1];  
+        uint8_t dscpValue = atoll(currentWord.c_str());    /* no error handling we might want to use boost::lexical_cast */
+
+        primitive = new IPDSCPPrimitive();
+        primitive->dscpValue = dscpValue;
+        
+        primitive->compile();
+        
+        return currentPosition + 2;
+    } else if (currentWord == "ce") {
+    
+    } else if (currentWord == "ect") {
+    
+    } else if (currentWord == "flow") {
+       if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
+        || _words[position+1] == "!=") {    /* determine whether an optional ==, >, >=, <=, <, != keyword was used */    
+            primitive = new IPFlowLabelPrimitive();
+            primitive->flowLabelValue1 = atoll(_words[position+2].c_str());
+            primitive->flowLabelValue2 = atoll(_words[position+2].c_str()) >> 16;
+            primitive->operator_ == _words[position+1];
+            primitive->compile();
+	    
+            return position + 3;
+        } else {
+            primitive = new IPFlowLabelPrimitive();
+            primitive->flowLabelValue1 = atoll(_words[position+1].c_str());
+            primitive->flowLabelValue2 = atoll(_words[position+1].c_str()) >> 16;
+            primitive->compile();
+            
+            return position + 2;        
+        }
+    } else if (currentWord == "plen") {
+        if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
+        || _words[position+1] == "!=") {
+            primitive = new IPPayloadLengthPrimitive();
+            primitive->payloadLength = atoll(_words[position+2].c_str());
+            primitive->operator_ == _words[position+1];
+            primitive->compile();
+            
+            return position + 3;
+        } else {
+            primitive = new IPPayloadLengthPrimitive();
+            primitive->payloadLength = atoll(_words[position+1].c_str());
+            primitive->compile();
+            
+            return position + 2;
+        }
+    } else if (currentWord == "nxt") {
+        if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
+        || _words[position+1] == "!=") {
+            primitive = new IPNextHeaderPrimitive();
+            primitive->nextHeader = atoll(_words[position+2].c_str());
+            primitive->operator_ == _words[position+1];
+            primitive->compile();
+            
+            return position + 3;
+        } else {
+            primitive = new IPNextHeaderPrimitive();
+            primitive->nextHeader = atoll(_words[position+1].c_str());
+            primitive->compile();
+            
+            return position + 2;
+        }
+    } else if (currentWord == "hlim") {
+        if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
+        || _words[position+1] == "!=") {
+            primitive = new IPHopLimitPrimitive();
+            primitive->hopLimit = atoll(_words[position+2].c_str());
+            primitive->primitiveOperator = _words[position+1];
+            primitive->operator_ == _words[position+1];
+            primitive->compile();
+            
+            return position + 3;
+        } else {
+            primitive = new IPHopLimitPrimitive();
+            primitive->hopLimit = atoll(_words[position+1].c_str());
+            primitive->compile();
+            
+            return position + 2;	    
+    } else if (currentWord == "src") {  /* this must be followed by host or net keyword */
+        if (_words[position+1] == "host") {
+            primitive = new IPHostPrimitive();
+            primitive->source_or_dest = "host";
+            if (_words[position+2] == "==" || _words[position+2] == ">" || _words[position+2] == ">=" || _words[position+2] == "<=" || _words[position+2] == "<" 
+            || _words[position+2] == "!=") {
+
+                primitive->ip6Address = IP6AddressArg().parse(_words[position+3], "primitive._ip6AddressMask" , _context); /* address mask nog invullen */
+                primitive->primitiveOperator = _words[position+3];
+                primitive->operator_ == _words[position+3]
+                primitive->compile();
+                
+                return position + 4;
+            } else {
+                primitive = new IPHostPrimitive();
+                primitive = new IPHostPrimitive();
+                primitive->ip6Address = atoll(_words[position+2].c_str());
+                primitive->primitiveOperator = _words[position+2];
+                primitive->compile();
+                
+                return position + 3;                
+            }
+        } else if (_words[position+1] == "net") {
+            if (_words[position+2] == "==" || _words[position+2] == ">" || _words[position+2] == ">=" || _words[position+2] == "<=" || _words[position+2] == "<" 
+            || _words[position+2] == "!=") {
+                
+            } else {
+            
+            }            
+        } else {
+            // throw error + return
+            return -10; /* -10 ook nog veranderen */
+        }
+	    
+    } else if (_words[position] == "dst") {  /* this must be followed by host or net keyword */
+            primitive = new IPHostPrimitive();
+            primitive->source_or_dest = "dst";
+            if (_words[position+2] == "==" || _words[position+2] == ">" || _words[position+2] == ">=" || _words[position+2] == "<=" || _words[position+2] == "<" 
+            || _words[position+2] == "!=") {
+
+                primitive->ip6Address = atoll(_words[position+3].c_str());
+                primitive->primitiveOperator = _words[position+3];
+                primitive->operator_ == _words[position+3]
+                primitive->compile();
+                
+                return position + 4;
+            } else {
+                primitive = new IPHostPrimitive();
+                primitive = new IPHostPrimitive();
+                primitive->ip6Address = atoll(_words[position+2].c_str());
+                primitive->primitiveOperator = _words[position+2];
+                primitive->compile();
+                
+                return position + 3;                
+            }
+        } else if (_words[position+1] == "net") {
+            if (_words[position+2] == "==" || _words[position+2] == ">" || _words[position+2] == ">=" || _words[position+2] == "<=" || _words[position+2] == "<" 
+            || _words[position+2] == "!=") {
+                
+            } else {
+            
+            }
+        } else {
+            // throw error + return
+            return -10; /* -10 ook nog veranderen */
+        }    
+	} else if (currentWord == "ether") {    // wellicht 'ether host'
+	    
+	}
+	
+	
+	    
+	
+
+    // now collect the actual data
+    if (position < _words.size()) {              
+	    word = _words[position];       // word; this is the current word we are handling
+	    uint32_t wdata;
+	    int wordType = lookup(word, primitive._internalPrimitiveType, primitive._transp_proto, wdata, _context, _errh); // wt stands for word type.
+	    position++;  // TODO so after the host type and an optional operator sign like ==, !=, >=, >, <=, < we move our position one further and start checking for the data
+
+	    if (wordType == -2)		// -2 means an ambiguous or incorrect word type
+	        /* absorb word, but do nothing */
+	        primitive._internalPrimitiveType = -2;
+
+	    else if (wordType != -1 && wordType != TYPE_TYPE) {     // a word type != -1   or TYPE_TYPE   means I have a proper and real type I guess.
+	        primitive._data = wordType;
+	        primitive._u.u = wdata;
+
+	    } else if (IntArg().parse(word, primitive._u.i))
+	        primitive._data = TYPE_INT;
+
+	    else if (header != 'e' && IP6AddressArg().parse(word, primitive._ip6Address, _context)) {        // TODO dit moeten we aanpassen en moet IPv6 adres zijn parse worden!
+	        if (position < _words.size() - 1 && _words[position] == "mask" && IP6AddressArg().parse(_words[position+1], primitive._ip6AddressMask, _context)) {
+		        position += 2;
+		        primitive._data = TYPE_NET;
+	        } else if (primitive._internalPrimitiveType == TYPE_NET && IPPrefixArg().parse(word, primitive._u.ip4, primitive._mask.ip4, _context))        // TODO ook hier werken met IPv6PrefixArg
+		        primitive._data = TYPE_NET;
+	        else
+		        primitive._data = TYPE_HOST;
+	    } else if (header != 'e' && IPPrefixArg().parse(word, primitive._u.ip4, primitive._mask.ip4, _context)) // TODO ook hier werken met IP6PrefixArg
+	    	primitive._data = TYPE_NET;
+
+	    else if (header != 'i' && EtherAddressArg().parse(word, primitive._u.c, _context))
+	    	primitive._data = TYPE_ETHER;
+
+	    else {
+	    	if (primitive._internalOperatorType != OP_EQ || primitive._isInternalOperatorInNegatedForm)
+	    		_errh->error("dangling operator near %<%s%>", word.c_str());
+	    	position--;
+	    }
+    }
+
+    if (position == startPosition) {
+	    _errh->error("empty term near %<%s%>", word.c_str());
+	    return position;
+    }
+
+    // add if it is valid
+    if (primitive.check(_prev_prim, header, mask_dt, provided_mask, _errh) >= 0) {       // if this returns anything but 0 it is OK
+	    primitive.compile(_program, _tree);                                                 // now we compile the primitive we have set before
+	    if (negated)
+	        _program.negate_subtree(_tree);
+	    _prev_prim = primitive;                      // our previous primitive can be read with this variable; // TODO why do we need to know the previous premitive?
+    }
+
+    return position;
 }
-
-// TODO
-// TODO     Deze functie kijkt heel wat zaken na op fouten.         (veronderstel ik)
-// TODO
-// TODO     Het getal nul returnen betekent dat alles in orde is.   (veronderstel ik)
-// TODO
-
-
-
-
-
 
 
 
@@ -337,7 +360,7 @@ IP6Filter::Primitive::check(const Primitive &prev_prim, int header, int mask_dt,
     int old_srcdst = _srcdst;       // TODO pre requirement: the _srcdst variable MUST have been set first, before this function can be used.
 
     // if _internalPrimitiveType is erroneous, return -1 right away
-    if (_internalPrimitiveType < 0)
+    if (_internalPrimitiveType < 0) /* NOT SET => ERROR */
 	    return -1;
 
     // set _internalPrimitiveType if it was not specified
@@ -366,8 +389,7 @@ IP6Filter::Primitive::check(const Primitive &prev_prim, int header, int mask_dt,
 	        case TYPE_TCPOPT:
 	            _internalPrimitiveType = _data;
 	            if (!_srcdst)   // if _srcdsr wasn't set (that is, it was == 0), then it will be set here.
-		            _srcdst = prev_prim._srcdst;    // TODO Why do we choose it that it needs to choose the _srcdst of previous premitive, if none was given? Isn't that just weird? How does real wireshark handle this. Do they also handle it this way?
-                                                    // TODO <obsolete comment> wat is het verschil tussen old_srcdst en prev_prim._srcdst ?
+		            _srcdst = prev_prim._srcdst;    /* wtf allowing a previous source or dest? No fucking way */
 	            break;
     
             //
@@ -705,195 +727,6 @@ IP6Filter::Primitive::add_comparison_exprs(Classification::Wordwise::Program &pr
     program.negate_subtree(tree, true);
 }
 
-// here the main code will be generated for the 'tests' (see grammar above parse_expr_iterative(...) for more details about what a test means)
-void
-IP6Filter::Primitive::compile(Classification::Wordwise::Program &program, Vector<int> &tree) const
-{
-  click_chatter("we enter P6Filter::Primitive::compile(...)");
-  program.start_subtree(tree);            // each Primitive gets its own tree I suppose.
-
-  // handle transport protocol uniformly
-  if (_transp_proto != UNKNOWN)             // TODO add information. If a transport protocol was given, we'll create the transport protocol instructions right here.
-                                            // TODO add_exprs_for_proto seems to be only used 1 time. It might be better to just add this information here inline then.
-    add_exprs_for_proto(_transp_proto, 0xFF, program, tree);  // 0xFF = 255 in het decimaal
-
-  // enforce first fragment: fragmentation offset == 0
-  if (_internalPrimitiveType == TYPE_PORT || _internalPrimitiveType == TYPE_TCPOPT || ((_internalPrimitiveType & TYPE_FIELD) && (_internalPrimitiveType & FIELD_PROTO_MASK))) // type is either TYPE_PORT, TYPE_TCPOPT or some random type that has the TYPE_FIELD and FIELD_PROTO_MASK field set.
-    program.add_insn(tree, offset_net + 4, 0, htonl(0x00001FFF)); // htonl(0x00001FFF)    = htonl(8191) in het decimaal
-
-
-  // handle other types
-  switch (_internalPrimitiveType) 
-  {
-    case TYPE_HOST:       // For each of our types, we start a subtree.
-    {
-      const uint32_t* ip6AddressArray;
-      ip6AddressArray = _ip6Address.data32();
-      program.start_subtree(tree);
-      // With SOURCE_AND_DEST and SOURCE_OR_DEST we need to add both the source IP address and destintation IP address to the tree (so we need both the first add_comparison_exprs as the second one) , with SOURCE we only need to add the source IP address to the tree (so we only add the first add_comparison_exprs statement), and with DEST we only need to add the destination IP address to the tree (so we only add the second add_comparison_exprs statement).
-      // In the case of SOURCE_AND_DEST and SOURCE_OR_DEST we choose the approriate combine option (namely Classification::c_or OR Classification::c_and) and in the case of SOURCE and DEST we don't really care because we have only one node, so AND'ing or OR'ing here does exactly the same.
-
-
-      // TODO rol van SOURCE_OR_DEST onderzoeken in deze context; deel hieronder dat er nu dubbel in staat nog wissen; laatste deel op _isInternalOperatorInNegatedForm laten staan (en dus niet wissen)
-      if (_srcdst == SOURCE) {
-            program.add_insn(tree, offset_net + 8, ip6AddressArray[0], 0b11111111111111111111111111111111);      // offset_net +8 to +20 contain the source address in an IPv6 packet
-            program.add_insn(tree, offset_net + 12, ip6AddressArray[1], 0b11111111111111111111111111111111);
-            program.add_insn(tree, offset_net + 16, ip6AddressArray[2], 0b11111111111111111111111111111111);
-            program.add_insn(tree, offset_net + 20, ip6AddressArray[3], 0b11111111111111111111111111111111);
-
-            program.finish_subtree(tree, Classification::c_and);
-      } else if (_srcdst == DEST) {
-            program.add_insn(tree, offset_net + 24, ip6AddressArray[0], 0b11111111111111111111111111111111);      // offset_net +24 to +36 contain the destination address in an IPv6 packet
-            program.add_insn(tree, offset_net + 28, ip6AddressArray[1], 0b11111111111111111111111111111111);
-            program.add_insn(tree, offset_net + 32, ip6AddressArray[2], 0b11111111111111111111111111111111);
-            program.add_insn(tree, offset_net + 36, ip6AddressArray[3], 0b11111111111111111111111111111111);
-
-            program.finish_subtree(tree, Classification::c_and); 
-      } else if (_srcdst == SOURCE_AND_DEST) {
-            program.add_insn(tree, offset_net + 8, ip6AddressArray[0], 0b11111111111111111111111111111111);
-            program.add_insn(tree, offset_net + 12, ip6AddressArray[1], 0b11111111111111111111111111111111);
-            program.add_insn(tree, offset_net + 16, ip6AddressArray[2], 0b11111111111111111111111111111111);
-            program.add_insn(tree, offset_net + 20, ip6AddressArray[3], 0b11111111111111111111111111111111);
-            program.add_insn(tree, offset_net + 24, ip6AddressArray[0], 0b11111111111111111111111111111111);     
-            program.add_insn(tree, offset_net + 28, ip6AddressArray[1], 0b11111111111111111111111111111111);
-            program.add_insn(tree, offset_net + 32, ip6AddressArray[2], 0b11111111111111111111111111111111);
-            program.add_insn(tree, offset_net + 36, ip6AddressArray[3], 0b11111111111111111111111111111111);
-
-            program.finish_subtree(tree, Classification::c_and); 
-      } else if (_srcdst == SOURCE_OR_DEST) {
-            program.start_subtree(tree);
-            program.add_insn(tree, offset_net + 8, ip6AddressArray[0], 0b11111111111111111111111111111111);
-            program.add_insn(tree, offset_net + 12, ip6AddressArray[1], 0b11111111111111111111111111111111);
-            program.add_insn(tree, offset_net + 16, ip6AddressArray[2], 0b11111111111111111111111111111111);
-            program.add_insn(tree, offset_net + 20, ip6AddressArray[3], 0b11111111111111111111111111111111);
-            program.finish_subtree(tree, Classification::c_and);
-
-            program.start_subtree(tree);
-            program.add_insn(tree, offset_net + 24, ip6AddressArray[0], 0b11111111111111111111111111111111);
-            program.add_insn(tree, offset_net + 28, ip6AddressArray[1], 0b11111111111111111111111111111111);
-            program.add_insn(tree, offset_net + 32, ip6AddressArray[2], 0b11111111111111111111111111111111);
-            program.add_insn(tree, offset_net + 36, ip6AddressArray[3], 0b11111111111111111111111111111111);
-            program.finish_subtree(tree, Classification::c_and);
-
-            program.finish_subtree(tree, Classification::c_or);
-      } else {
-            // Throw an error
-      }   
-
-      if (_srcdst == SOURCE || _srcdst == SOURCE_AND_DEST || _srcdst == SOURCE_OR_DEST) {
-            // TODO nakijken wat we hier moeten doen , nog niet in orde
-
-
-            // TODO we doen momenteel enkel operator IP6Filter::OP_EQ , kleiner dan of grote dan is complexer als bij een adres dat maar 32 bits lang is.
-            // TODO ik denk dat nu de truuk gaat zijn om eerst de meest significante bits te vergelijken, als deze geen uitsluiten geven gaan we naar de 2de reeks bit, als die nog geen uitsluitsel geven naa de 3de reeks bits, en als die nog geen uitsluitsel geven naar de 4de reeks bits.
- //           const uint32_t* ip6AddressArray = _ip6Address.data32();    // we get our IP address now as an array of 4 32-bit values, which is what we need for our instruction language wich works with 32-bit words. 
-
-//            IP6Address tempMask = IP6Address::make_prefix(128);             // TODO dit is tijdelijk; een prefix van 128 is gelijk aan ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
-
-
-
-            // Is dit juist?
-
-
-            program.finish_subtree(tree, Classification::c_and);      // hopelijk is dit juist
-
-	    //    add_comparison_exprs(p, tree, offset_net + 12, 0, true, false);     // deze regel moet er nog tussen uit
-       }       
-      if (_srcdst == DEST || _srcdst == SOURCE_AND_DEST || _srcdst == SOURCE_OR_DEST)
-	    add_comparison_exprs(program, tree, offset_net + 16, 0, true, false);
-  finish_srcdst:
- //     program.finish_subtree(tree, (_srcdst == SOURCE_OR_DEST ? Classification::c_or : Classification::c_and));
-      if (_isInternalOperatorInNegatedForm)      // if the statement is preceeded with 'not' or '!' we need to negate the subtree
-	    program.negate_subtree(tree, true);
-      break;
-    }
-
-  case TYPE_ETHER: {
-      program.start_subtree(tree);
-      Primitive copy(*this);
-      if (_srcdst == SOURCE || _srcdst == SOURCE_AND_DEST || _srcdst == SOURCE_OR_DEST) {
-        program.start_subtree(tree);
-
-	    memcpy(copy._u.c, _u.c, 4);
-	    memcpy(copy._mask.c, _mask.c, 4);
-	    copy.add_comparison_exprs(program, tree, offset_mac + 8, 0, true, false);
-	    copy._u.u = copy._mask.u = 0;
-	    memcpy(copy._u.c, _u.c + 4, 2);
-	    memcpy(copy._mask.c, _mask.c + 4, 2);
-	    copy.add_comparison_exprs(program, tree, offset_mac + 12, 0, true, false);
-
-        program.finish_subtree(tree, Classification::c_and);
-      }
-      if (_srcdst == DEST || _srcdst == SOURCE_AND_DEST || _srcdst == SOURCE_OR_DEST) {
-        program.start_subtree(tree);
-
-	    copy._u.u = copy._mask.u = 0;
-	    memcpy(copy._u.c + 2, _u.c, 2);
-	    memcpy(copy._mask.c + 2, _mask.c, 2);
-	    copy.add_comparison_exprs(program, tree, offset_mac, 0, true, false);
-	    memcpy(copy._u.c, _u.c + 2, 4);
-	    memcpy(copy._mask.c, _mask.c + 2, 4);
-	    copy.add_comparison_exprs(program, tree, offset_mac + 4, 0, true, false);
-
-        program.finish_subtree(tree, Classification::c_and);
-      }
-      goto finish_srcdst;
-  }
-
-  case TYPE_PROTO:
-  {
-      if (_transp_proto < 256)
-	    add_comparison_exprs(program, tree, offset_net + 8, 16, false, true);
-      break;
-  }
-
-  case TYPE_IPFRAG:
-  {
-      program.add_insn(tree, offset_net + 4, 0, htonl(0x00003FFF));
-      if (!_isInternalOperatorInNegatedForm)
-	    program.negate_subtree(tree, true);
-      break;
-  }
-
-  case TYPE_PORT:
-  {
-      program.start_subtree(tree);
-      if (_srcdst == SOURCE || _srcdst == SOURCE_AND_DEST || _srcdst == SOURCE_OR_DEST)
-	    add_comparison_exprs(program, tree, offset_transp, 16, false, false);
-      if (_srcdst == DEST || _srcdst == SOURCE_AND_DEST || _srcdst == SOURCE_OR_DEST)
-	    add_comparison_exprs(program, tree, offset_transp, 0, false, false);
-      goto finish_srcdst;
-  }
- 
-  case TYPE_TCPOPT:
-  {
-      program.add_insn(tree, offset_transp + 12, htonl(_u.u << 16), htonl(_mask.u << 16));
-      break;
-  }
-
-  default:
-  {   // if internal primitive type was not set to a "normal" number, it needs to be checken against some fields, like the "TYPE-FIELD",
-      // the "FIELD_OFFSET_MASK" field and the "FIELD_LENGTH_MASK" field.
-      if (_internalPrimitiveType & TYPE_FIELD) {
-	    int offset = (_internalPrimitiveType & FIELD_OFFSET_MASK) >> FIELD_OFFSET_SHIFT;
-	    int length = ((_internalPrimitiveType & FIELD_LENGTH_MASK) >> FIELD_LENGTH_SHIFT) + 1;
-	    int word_offset = (offset >> 3) & ~3, bit_offset = offset & 0x1F;
-	    int base_offset = (_internalPrimitiveType & FIELD_PROTO_MASK ? offset_transp : offset_net); // we choose between the transport layer offset OR the "normal" network layer offset
-	    add_comparison_exprs(program, tree, base_offset + word_offset, 32 - (bit_offset + length), false, true); // we start with the base_offset and count the 
-                                                                                                                 // word_offset with that value.
-
-                                                                                                                    // 32 is total number of bits
-                                                                                                                    // - (bit_offset + how long the bit offset is)
-                                                                                                                  
-      } else
-	    assert(0);
-      break;
-  }
- }
-
-  program.finish_subtree(tree);
-}
-
 // TODO hoe werkt dit? in wat voor units wordt u tekst opgedeeld? => documentatie ontbreekt!
 static void
 separate_text(const String &text, Vector<String> &words)
@@ -1151,210 +984,7 @@ parse_brackets(IP6Filter::Primitive& prim, const Vector<String>& words, int pos,
   return pos;
 }
 
-// parse 'test' on encountering it.
-int
-IP6Filter::Parser::parse_primitive(int position, bool negatedSignSeen)    // parse het test gedeelte uit de grammatica
-{
-    currentWord = _words[position];
 
-    // error handling
-    if (position >= _words.size())
-	    return position;    /* out of range */
-	if (_words[position] == ")" || _words[position] == "||" || _words[position] == "?" || _words[position] == ":" || _words[position] == "or" )
-	    return position;    /* non-acceptable first word */
-	  
-	// start of parsing
-	if (_words[position] == "true") {
-	    _program.add_insn(_tree, 0, 0, 0);  /* everything matches with mask 0 */
-	    if (negatedSignSeen)
-	        _program.negate_subtree(_tree);
-	    return position + 1;    /* go further in parse_expr_iterative() with the next position */
-	}
-	if (_words[position] == "false") {
-	    _program.add_insn(_tree, 0, 0, 0);  /* everything matches with mask 0 */
-	    if (!negatedSignSeen)               
-	        _program.negate_subtree(_tree);
-	    return position + 1;    /* go further in parse_expr_iterative() with the next position */
-	}
-
-
-    if (!(position + 1 <= _words.size())) { /* all qualifiers are followed by at least some data */
-        // throw error + return
-        return -10; /* -10 ook nog veranderen */
-    }
-  
-
-    if (currentWord == "vers") {
-        if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
-        || _words[position+1] == "!=") {    /* determine whether an optional ==, >, >=, <=, <, != keyword was used */
-            primitive = new IPVersionPrimitive();
-            primitive->versionNumber = atoll([position+2].c_str());    /* no error handling we might want to use boost::lexical_cast */
-            primitive->compile();
-            
-            return position + 3;
-        } else {            
-            primitive = new IPVersionPrimitive();
-            primitive->versionNumber = atoll([position+1].c_str());    /* no error handling we might want to use boost::lexical_cast */
-            primitive->compile();
-            
-            return position + 2;
-        }
-    } else if (currentWord == "dscp") {
-       if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
-        || _words[position+1] == "!=") {    /* determine whether an optional ==, >, >=, <=, <, != keyword was used */
-            primitive = new IPDSCPPrimitive();
-            primitive->dscpValue = atoll([position+2].c_str());
-            primitive->compile();
-            
-            return position + 3;
-        } else {
-            primitive = new IPDSCPPrimitive();
-            primitive->dscpValue = atoll([position+1].c_str());
-            primitive->compile();
-            
-            return position + 2;
-        }
-        
-        
-        currentWord = _words[position + 1];  
-        uint8_t dscpValue = atoll(currentWord.c_str());    /* no error handling we might want to use boost::lexical_cast */
-
-        primitive = new IPDSCPPrimitive();
-        primitive->dscpValue = dscpValue;
-        
-        primitive->compile();
-        
-        return currentPosition + 2;
-    } else if (currentWord == "ce") {
-    
-    } else if (currentWord == "ect") {
-    
-    } else if (currentWord == "flow") {
-        currentWord = _words[position + 1];
-        uint64_t flowValue = atoll(currentWord.c_str());
-	    
-        primitive = new IPFlowLabelPrimitive();
-        primitive->flowLabelValue1 = flowValue;
-        primitive->flowLabelValue2 = flowValue >> 16;
-        
-        primitive->compile();
-	    
-        return position + 2;
-    } else if (currentWord == "plen") {
-        currentWord = _words[position + 1];
-        uint32_t plen = atoll(currentWord.ctr());
-    } else if (currentWord == "nxt") {
-        currentWord = _words[position + 1];    
-    } else if (currentWord == "hlim") {
-	    
-    } else if (currentWord == "src") {  /* this must be followed by host or net keyword */
-        if (_words[position+1] == "host") {
-            
-        } else if (_words[position+1] == "net") {
-            
-        } else {
-            // throw error + return
-            return -10; /* -10 ook nog veranderen */
-        }
-	    
-    } else if (_words[position] == "dst") {  /* this must be followed by host or net keyword */
-	    if (_words[position+1] == "host") {
-	        primitive = new IPHostPrimitive();
-            if (IP6AddressArg().parse(_words[position + 2], primitive->ip6Address, _context)) {
-                primitive->compile();
-                return position + 3;
-            } else {
-                // throw error + return
-                return -10;
-            }
-        } else if (_words[position+1] == "net") {
-            
-        } else {
-            // throw error + return
-            return -10; /* -10 ook nog veranderen */
-        }    
-	} else if (currentWord == "ether") {    // wellicht 'ether host'
-	
-	}
-	
-	
-	    
-	
-
-
-    // optional relational operation
-    position++;                              // TODO after a qualifier word i guess we can start seeing one of these operators below; only with = or == we do not need to change anything. I suppose this is because acting with = is the standard method we are going to use when nothing is given too?
-    if (word == "=" || word == "==")
-	    /* nada */;
-    else if (word == "!=")
-	    primitive._isInternalOperatorInNegatedForm = true;
-    else if (word == ">")
-	    primitive._internalOperatorType = OP_GT;
-    else if (word == "<")
-	    primitive._internalOperatorType = OP_LT;
-    else if (word == ">=") {
-	    primitive._internalOperatorType = OP_LT;
-	    primitive._isInternalOperatorInNegatedForm = true;
-    } else if (word == "<=") {
-	    primitive._internalOperatorType = OP_GT;
-	    primitive._isInternalOperatorInNegatedForm = true;
-    } else
-	    position--;
-
-    // now collect the actual data
-    if (position < _words.size()) {              
-	    word = _words[position];       // word; this is the current word we are handling
-	    uint32_t wdata;
-	    int wordType = lookup(word, primitive._internalPrimitiveType, primitive._transp_proto, wdata, _context, _errh); // wt stands for word type.
-	    position++;  // TODO so after the host type and an optional operator sign like ==, !=, >=, >, <=, < we move our position one further and start checking for the data
-
-	    if (wordType == -2)		// -2 means an ambiguous or incorrect word type
-	        /* absorb word, but do nothing */
-	        primitive._internalPrimitiveType = -2;
-
-	    else if (wordType != -1 && wordType != TYPE_TYPE) {     // a word type != -1   or TYPE_TYPE   means I have a proper and real type I guess.
-	        primitive._data = wordType;
-	        primitive._u.u = wdata;
-
-	    } else if (IntArg().parse(word, primitive._u.i))
-	        primitive._data = TYPE_INT;
-
-	    else if (header != 'e' && IP6AddressArg().parse(word, primitive._ip6Address, _context)) {        // TODO dit moeten we aanpassen en moet IPv6 adres zijn parse worden!
-	        if (position < _words.size() - 1 && _words[position] == "mask" && IP6AddressArg().parse(_words[position+1], primitive._ip6AddressMask, _context)) {
-		        position += 2;
-		        primitive._data = TYPE_NET;
-	        } else if (primitive._internalPrimitiveType == TYPE_NET && IPPrefixArg().parse(word, primitive._u.ip4, primitive._mask.ip4, _context))        // TODO ook hier werken met IPv6PrefixArg
-		        primitive._data = TYPE_NET;
-	        else
-		        primitive._data = TYPE_HOST;
-	    } else if (header != 'e' && IPPrefixArg().parse(word, primitive._u.ip4, primitive._mask.ip4, _context)) // TODO ook hier werken met IP6PrefixArg
-	    	primitive._data = TYPE_NET;
-
-	    else if (header != 'i' && EtherAddressArg().parse(word, primitive._u.c, _context))
-	    	primitive._data = TYPE_ETHER;
-
-	    else {
-	    	if (primitive._internalOperatorType != OP_EQ || primitive._isInternalOperatorInNegatedForm)
-	    		_errh->error("dangling operator near %<%s%>", word.c_str());
-	    	position--;
-	    }
-    }
-
-    if (position == startPosition) {
-	    _errh->error("empty term near %<%s%>", word.c_str());
-	    return position;
-    }
-
-    // add if it is valid
-    if (primitive.check(_prev_prim, header, mask_dt, provided_mask, _errh) >= 0) {       // if this returns anything but 0 it is OK
-	    primitive.compile(_program, _tree);                                                 // now we compile the primitive we have set before
-	    if (negated)
-	        _program.negate_subtree(_tree);
-	    _prev_prim = primitive;                      // our previous primitive can be read with this variable; // TODO why do we need to know the previous premitive?
-    }
-
-    return position;
-}
 
 // TODO
 // TODO     Hier start het parsen denk ik als het Classifier element wordt aangemaakt
