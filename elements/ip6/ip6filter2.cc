@@ -93,128 +93,121 @@ IP6Filter::Parser::parse_primitive(int position, bool negatedSignSeen)    // par
         return -10; /* -10 ook nog veranderen */
     }
   
+    if (currentWord == "ip") {
 
-    if (currentWord == "vers") {
-        if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
-        || _words[position+1] == "!=") {    /* determine whether an optional ==, >, >=, <=, <, != keyword was used */
-            primitive = new IPVersionPrimitive();
-            primitive->versionNumber = atoll([position+2].c_str());    /* no error handling we might want to use boost::lexical_cast */
-            primitive->operator_ == _words[position+1];
-            primitive->compile();
-            
-            return position + 3;
-        } else {            
-            primitive = new IPVersionPrimitive();
-            primitive->versionNumber = atoll([position+1].c_str());    /* no error handling we might want to use boost::lexical_cast */
-            primitive->compile();
-            
-            return position + 2;
-        }
-    } else if (currentWord == "dscp") {
-       if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
-        || _words[position+1] == "!=") {    /* determine whether an optional ==, >, >=, <=, <, != keyword was used */
-            primitive = new IPDSCPPrimitive();
-            primitive->dscpValue = atoll([position+2].c_str());
-            primitive->operator_ == _words[position+1];
-            primitive->compile();
-            
-            return position + 3;
-        } else {
-            primitive = new IPDSCPPrimitive();
-            primitive->dscpValue = atoll([position+1].c_str());
-            primitive->compile();
-            
-            return position + 2;
-        }
+        if (currentWord == "vers") {
+            if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
+            || _words[position+1] == "!=") {    /* determine whether an optional ==, >, >=, <=, <, != keyword was used */
+                primitive = new IPVersionPrimitive();
+                primitive->versionNumber = atoll([position+2].c_str());    /* no error handling we might want to use boost::lexical_cast */
+                primitive->operator_ == _words[position+1];
+                primitive->compile();
+                
+                return position + 3;
+            } else {            
+                primitive = new IPVersionPrimitive();
+                primitive->versionNumber = atoll([position+1].c_str());    /* no error handling we might want to use boost::lexical_cast */
+                primitive->compile();
+                
+                return position + 2;
+            }
+        } else if (currentWord == "dscp") {
+           if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
+            || _words[position+1] == "!=") {    /* determine whether an optional ==, >, >=, <=, <, != keyword was used */
+                primitive = new IPDSCPPrimitive();
+                primitive->dscpValue = atoll([position+2].c_str());
+                primitive->operator_ == _words[position+1];
+                primitive->compile();
+                
+                return position + 3;
+            } else {
+                primitive = new IPDSCPPrimitive();
+                primitive->dscpValue = atoll([position+1].c_str());
+                primitive->compile();
+                
+                return position + 2;
+            }
+        } else if (currentWord == "ce") {
         
+        } else if (currentWord == "ect") {
         
-        currentWord = _words[position + 1];  
-        uint8_t dscpValue = atoll(currentWord.c_str());    /* no error handling we might want to use boost::lexical_cast */
-
-        primitive = new IPDSCPPrimitive();
-        primitive->dscpValue = dscpValue;
-        
-        primitive->compile();
-        
-        return currentPosition + 2;
-    } else if (currentWord == "ce") {
-    
-    } else if (currentWord == "ect") {
-    
-    } else if (currentWord == "flow") {
-       if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
-        || _words[position+1] == "!=") {    /* determine whether an optional ==, >, >=, <=, <, != keyword was used */    
-            primitive = new IPFlowLabelPrimitive();
-            primitive->flowLabelValue1 = atoll(_words[position+2].c_str());
-            primitive->flowLabelValue2 = atoll(_words[position+2].c_str()) >> 16;
-            primitive->operator_ == _words[position+1];
-            primitive->compile();
-	    
-            return position + 3;
+        } else if (currentWord == "flow") {
+           if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
+            || _words[position+1] == "!=") {    /* determine whether an optional ==, >, >=, <=, <, != keyword was used */    
+                primitive = new IPFlowLabelPrimitive();
+                primitive->flowLabelValue1 = atoll(_words[position+2].c_str());
+                primitive->flowLabelValue2 = atoll(_words[position+2].c_str()) >> 16;
+                primitive->operator_ == _words[position+1];
+                primitive->compile();
+	        
+                return position + 3;
+            } else {
+                primitive = new IPFlowLabelPrimitive();
+                primitive->flowLabelValue1 = atoll(_words[position+1].c_str());
+                primitive->flowLabelValue2 = atoll(_words[position+1].c_str()) >> 16;
+                primitive->compile();
+                
+                return position + 2;        
+            }
+        } else if (currentWord == "plen") {
+            if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
+            || _words[position+1] == "!=") {
+                primitive = new IPPayloadLengthPrimitive();
+                primitive->payloadLength = atoll(_words[position+2].c_str());
+                primitive->operator_ == _words[position+1];
+                primitive->compile();
+                
+                return position + 3;
+            } else {
+                primitive = new IPPayloadLengthPrimitive();
+                primitive->payloadLength = atoll(_words[position+1].c_str());
+                primitive->compile();
+                
+                return position + 2;
+            }
+        } else if (currentWord == "nxt") {
+            if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
+            || _words[position+1] == "!=") {
+                primitive = new IPNextHeaderPrimitive();
+                primitive->nextHeader = atoll(_words[position+2].c_str());
+                primitive->operator_ == _words[position+1];
+                primitive->compile();
+                
+                return position + 3;
+            } else {
+                primitive = new IPNextHeaderPrimitive();
+                primitive->nextHeader = atoll(_words[position+1].c_str());
+                primitive->compile();
+                
+                return position + 2;
+            }
+        } else if (currentWord == "hlim") {
+            if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
+            || _words[position+1] == "!=") {
+                primitive = new IPHopLimitPrimitive();
+                primitive->hopLimit = atoll(_words[position+2].c_str());
+                primitive->primitiveOperator = _words[position+1];
+                primitive->operator_ == _words[position+1];
+                primitive->compile();
+                
+                return position + 3;
+            } else {
+                primitive = new IPHopLimitPrimitive();
+                primitive->hopLimit = atoll(_words[position+1].c_str());
+                primitive->compile();
+                
+                return position + 2;
         } else {
-            primitive = new IPFlowLabelPrimitive();
-            primitive->flowLabelValue1 = atoll(_words[position+1].c_str());
-            primitive->flowLabelValue2 = atoll(_words[position+1].c_str()) >> 16;
-            primitive->compile();
-            
-            return position + 2;        
+            /* an error occured: throw an error and return */
+            return -10;
         }
-    } else if (currentWord == "plen") {
-        if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
-        || _words[position+1] == "!=") {
-            primitive = new IPPayloadLengthPrimitive();
-            primitive->payloadLength = atoll(_words[position+2].c_str());
-            primitive->operator_ == _words[position+1];
-            primitive->compile();
-            
-            return position + 3;
-        } else {
-            primitive = new IPPayloadLengthPrimitive();
-            primitive->payloadLength = atoll(_words[position+1].c_str());
-            primitive->compile();
-            
-            return position + 2;
-        }
-    } else if (currentWord == "nxt") {
-        if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
-        || _words[position+1] == "!=") {
-            primitive = new IPNextHeaderPrimitive();
-            primitive->nextHeader = atoll(_words[position+2].c_str());
-            primitive->operator_ == _words[position+1];
-            primitive->compile();
-            
-            return position + 3;
-        } else {
-            primitive = new IPNextHeaderPrimitive();
-            primitive->nextHeader = atoll(_words[position+1].c_str());
-            primitive->compile();
-            
-            return position + 2;
-        }
-    } else if (currentWord == "hlim") {
-        if (_words[position+1] == "==" || _words[position+1] == ">" || _words[position+1] == ">=" || _words[position+1] == "<=" || _words[position+1] == "<" 
-        || _words[position+1] == "!=") {
-            primitive = new IPHopLimitPrimitive();
-            primitive->hopLimit = atoll(_words[position+2].c_str());
-            primitive->primitiveOperator = _words[position+1];
-            primitive->operator_ == _words[position+1];
-            primitive->compile();
-            
-            return position + 3;
-        } else {
-            primitive = new IPHopLimitPrimitive();
-            primitive->hopLimit = atoll(_words[position+1].c_str());
-            primitive->compile();
-            
-            return position + 2;	    
     } else if (currentWord == "src") {  /* this must be followed by host or net keyword */
         if (_words[position+1] == "host") {
             primitive = new IPHostPrimitive();
             primitive->source_or_dest = "host";
             if (_words[position+2] == "==" || _words[position+2] == ">" || _words[position+2] == ">=" || _words[position+2] == "<=" || _words[position+2] == "<" 
             || _words[position+2] == "!=") {
-
-                primitive->ip6Address = IP6AddressArg().parse(_words[position+3], "primitive._ip6AddressMask" , _context); /* address mask nog invullen */
+                primitive->ip6Address = IP6AddressArg().parse(_words[position+3], 0b11111111111111111111111111111111 , _context);
                 primitive->primitiveOperator = _words[position+3];
                 primitive->operator_ == _words[position+3]
                 primitive->compile();
@@ -223,7 +216,7 @@ IP6Filter::Parser::parse_primitive(int position, bool negatedSignSeen)    // par
             } else {
                 primitive = new IPHostPrimitive();
                 primitive = new IPHostPrimitive();
-                primitive->ip6Address = atoll(_words[position+2].c_str());
+                primitive->ip6Address = IP6AddressArg().parse(_words[position+2], 0b11111111111111111111111111111111 , _context);
                 primitive->primitiveOperator = _words[position+2];
                 primitive->compile();
                 
@@ -232,22 +225,50 @@ IP6Filter::Parser::parse_primitive(int position, bool negatedSignSeen)    // par
         } else if (_words[position+1] == "net") {
             if (_words[position+2] == "==" || _words[position+2] == ">" || _words[position+2] == ">=" || _words[position+2] == "<=" || _words[position+2] == "<" 
             || _words[position+2] == "!=") {
+                primitive = new IPNetPrimitive();
                 
+                if(!IP6PrefixArg().parse(_words[position+3], primitive->ip6NetAddress, 0b11111111111111111111111111111111 , _context))
+                    return -10; /* parsing failed */
+                primitive->primitiveOperator = _words[position+3];
+                primitive->operator_ == _words[position+3]
+                primitive->compile();
+                
+                return position + 4;
+            } else {
+                primitive = new IPNetPrimitive();
+                
+                if(!IP6PrefixArg().parse(_words[position+2], primitive->ip6NetAddress, 0b11111111111111111111111111111111 , _context))
+                    return -10; /* parsing failed */
+                primitive->primitiveOperator = _words[position+2];
+                primitive->operator_ == "==";
+                primitive->compile();
+                
+                return position + 3;
+            }
+        } else if (_words[position+1] == "ether" && _words[position+2] == "host") {
+            if (_words[position+2] == "==" || _words[position+2] == ">" || _words[position+2] == ">=" || _words[position+2] == "<=" || _words[position+2] == "<" 
+            || _words[position+2] == "!=") {
+                primitive = new EtherHostPrimitive();
+                
+                if(!EtherAddressArg()            
+            
             } else {
             
-            }            
+            }
         } else {
             // throw error + return
             return -10; /* -10 ook nog veranderen */
         }
 	    
     } else if (_words[position] == "dst") {  /* this must be followed by host or net keyword */
+        if (_words[position+1] == "host") {
             primitive = new IPHostPrimitive();
             primitive->source_or_dest = "dst";
             if (_words[position+2] == "==" || _words[position+2] == ">" || _words[position+2] == ">=" || _words[position+2] == "<=" || _words[position+2] == "<" 
             || _words[position+2] == "!=") {
 
-                primitive->ip6Address = atoll(_words[position+3].c_str());
+                if(!IP6AddressArg().parse(_words[position+3], primitive->ip6Address, 0b11111111111111111111111111111111 , _context))
+                    return -10; /* parsing failed */
                 primitive->primitiveOperator = _words[position+3];
                 primitive->operator_ == _words[position+3]
                 primitive->compile();
@@ -255,8 +276,8 @@ IP6Filter::Parser::parse_primitive(int position, bool negatedSignSeen)    // par
                 return position + 4;
             } else {
                 primitive = new IPHostPrimitive();
-                primitive = new IPHostPrimitive();
-                primitive->ip6Address = atoll(_words[position+2].c_str());
+                if(!IP6AddressArg().parse(_words[position+2], primitive->ip6Address, 0b11111111111111111111111111111111 , _context))
+                    return -10; /* parsing failed */
                 primitive->primitiveOperator = _words[position+2];
                 primitive->compile();
                 
@@ -265,73 +286,46 @@ IP6Filter::Parser::parse_primitive(int position, bool negatedSignSeen)    // par
         } else if (_words[position+1] == "net") {
             if (_words[position+2] == "==" || _words[position+2] == ">" || _words[position+2] == ">=" || _words[position+2] == "<=" || _words[position+2] == "<" 
             || _words[position+2] == "!=") {
+                primitive = new IPNetPrimitive();
                 
+                primitive->operator_ = _words[position+2];
+                if(!IP6PrefixArg().parse(_words[position+3], primitive->ip6NetAddress, 0b11111111111111111111111111111111 , _context))
+                    return -10; /* parsing failed */
+                primitive->compile();
+                
+                return position + 4;
             } else {
-            
+                primitive = new IPNetPrimitive();
+                
+                primitive->operator_ = "==";
+                if(!IP6PrefixArg().parse(_words[position+2], primitive->ip6NetAddress, 0b11111111111111111111111111111111 , _context))
+                    return -10; /* parsing failed */
+                primitive->compile();
+                
+                return position + 3;
             }
         } else {
             // throw error + return
             return -10; /* -10 ook nog veranderen */
         }    
 	} else if (currentWord == "ether") {    // wellicht 'ether host'
-	    
+        if (_words[position+1] == "host") {
+            primitive->source_or_dest = "src or dst";
+            if (_words[position+2] == "==" || _words[position+2] == ">" || _words[position+2] == ">=" || _words[position+2] == "<=" || _words[position+2] == "<" 
+            || _words[position+2] == "!=") {
+                primitive = new EtherHostPrimitive();
+                primitive->operator_ = _words[position+2];
+                if(!EtherAddressArg().parse(_words[position+3], primitive->etherAddress, _context)) {
+                    return -10; /* parsing failed */
+                }
+                return position + 4;
+                
+            
+        }
 	}
 	
-	
-	    
-	
-
-    // now collect the actual data
-    if (position < _words.size()) {              
-	    word = _words[position];       // word; this is the current word we are handling
-	    uint32_t wdata;
-	    int wordType = lookup(word, primitive._internalPrimitiveType, primitive._transp_proto, wdata, _context, _errh); // wt stands for word type.
-	    position++;  // TODO so after the host type and an optional operator sign like ==, !=, >=, >, <=, < we move our position one further and start checking for the data
-
-	    if (wordType == -2)		// -2 means an ambiguous or incorrect word type
-	        /* absorb word, but do nothing */
-	        primitive._internalPrimitiveType = -2;
-
-	    else if (wordType != -1 && wordType != TYPE_TYPE) {     // a word type != -1   or TYPE_TYPE   means I have a proper and real type I guess.
-	        primitive._data = wordType;
-	        primitive._u.u = wdata;
-
-	    } else if (IntArg().parse(word, primitive._u.i))
-	        primitive._data = TYPE_INT;
-
-	    else if (header != 'e' && IP6AddressArg().parse(word, primitive._ip6Address, _context)) {        // TODO dit moeten we aanpassen en moet IPv6 adres zijn parse worden!
-	        if (position < _words.size() - 1 && _words[position] == "mask" && IP6AddressArg().parse(_words[position+1], primitive._ip6AddressMask, _context)) {
-		        position += 2;
-		        primitive._data = TYPE_NET;
-	        } else if (primitive._internalPrimitiveType == TYPE_NET && IPPrefixArg().parse(word, primitive._u.ip4, primitive._mask.ip4, _context))        // TODO ook hier werken met IPv6PrefixArg
-		        primitive._data = TYPE_NET;
-	        else
-		        primitive._data = TYPE_HOST;
-	    } else if (header != 'e' && IPPrefixArg().parse(word, primitive._u.ip4, primitive._mask.ip4, _context)) // TODO ook hier werken met IP6PrefixArg
-	    	primitive._data = TYPE_NET;
-
-	    else if (header != 'i' && EtherAddressArg().parse(word, primitive._u.c, _context))
-	    	primitive._data = TYPE_ETHER;
-
-	    else {
-	    	if (primitive._internalOperatorType != OP_EQ || primitive._isInternalOperatorInNegatedForm)
-	    		_errh->error("dangling operator near %<%s%>", word.c_str());
-	    	position--;
-	    }
-    }
-
-    if (position == startPosition) {
-	    _errh->error("empty term near %<%s%>", word.c_str());
-	    return position;
-    }
-
-    // add if it is valid
-    if (primitive.check(_prev_prim, header, mask_dt, provided_mask, _errh) >= 0) {       // if this returns anything but 0 it is OK
-	    primitive.compile(_program, _tree);                                                 // now we compile the primitive we have set before
-	    if (negated)
-	        _program.negate_subtree(_tree);
-	    _prev_prim = primitive;                      // our previous primitive can be read with this variable; // TODO why do we need to know the previous premitive?
-    }
+    if (negatedSignSeen)
+        _program.negate_subtree(_tree);
 
     return position;
 }
