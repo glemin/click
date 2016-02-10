@@ -12,7 +12,7 @@ public:
     IP6Address ip6Address;
     String source_or_dest = "not set"; /* will be assigned "src", "dst", "src or dst" or "src and dst" */   
 
-    void compile(Classification::Wordwise::CompressedProgram program);
+    void compile(Classification::Wordwise::CompressedProgram& program);
     void print();
 };
 
@@ -95,7 +95,7 @@ public:
     click_ether etherAddress;
     String source_or_dest = "not set"; /* will be assigned "src", "dst", "src or dst" or "src and dst" */   
 
-    void compile(Classification::Wordwise::CompressedProgram program);
+    void compile(Classification::Wordwise::CompressedProgram& program);
     void print();
 };
 
@@ -103,7 +103,7 @@ class ICMPTypePrimitive: public Primitive {
 public:
     uint8_t typeValue;
     
-    void compile(Classification::Wordwise::CompressedProgram program);
+    void compile(Classification::Wordwise::CompressedProgram& program);
     void print();
 };
 
