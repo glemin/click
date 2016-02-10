@@ -10,7 +10,17 @@ class IPHostPrimitive: public Primitive {
 public:
     // data
     IP6Address ip6Address;
-    String source_or_dest; /* will be assigned an enumerate type as an acronym for a certain option */   
+    String source_or_dest = "not set"; /* will be assigned "src", "dst", "src or dst" or "src and dst" */   
+
+    void compile(Classification::Wordwise::CompressedProgram program);
+    void print();
+};
+
+class IPNetPrimitive: public Primitive {
+public:
+    // data
+    IP6Address ip6NetAddress;
+    String source_or_dest = "not set"; /* will be assigned "src", "dst", "src or dst" or "src and dst" */   
 
     void compile(Classification::Wordwise::CompressedProgram program);
     void print();
@@ -78,4 +88,33 @@ public:
 
     void compile(Classification::Wordwise::CompressedProgram program);
     void print();
+};
+
+class EtherHostPrimitive: public Primitive {
+public:
+    click_ether etherAddress;
+    String source_or_dest = "not set"; /* will be assigned "src", "dst", "src or dst" or "src and dst" */   
+
+    void compile(Classification::Wordwise::CompressedProgram program);
+    void print();
+};
+
+class ICMPTypePrimitive: public Primitive {
+public:
+    uint8_t typeValue;
+    
+    void compile(Classification::Wordwise::CompressedProgram program);
+    void print();
+};
+
+class UDPPortPrimitive: public Primitive {
+public:
+    bool isSourcePort;  /* if false we know it is a Destination port */
+    uint16_t port;
+};
+
+class TCPPortPrimitive: public Primitive {
+public:
+    bool isSourcePort;  /* if false we know it is a Source port */
+    uint16_t port;
 };
