@@ -1,6 +1,14 @@
 #ifndef CLICK_IP6FILTER_CLASSES_HH
 #define CLICK_IP6FILTER_CLASSES_HH
 
+#include <stdint.h>
+#include <click/glue.hh>
+#include <click/string.hh>
+#include <clicknet/ether.h>
+#include <clicknet/ip6.h>
+#include "elements/standard/classification.hh"
+CLICK_DECLS
+
 class Primitive {
 public:
     String operator_;  
@@ -9,7 +17,7 @@ public:
 class IPHostPrimitive: public Primitive {
 public:
     // data
-    IP6Address ip6Address;
+    click_ip6 ip6Address;
     String source_or_dest = "not set"; /* will be assigned "src", "dst", "src or dst" or "src and dst" */   
 
     void compile(Classification::Wordwise::CompressedProgram& program);
@@ -19,7 +27,7 @@ public:
 class IPNetPrimitive: public Primitive {
 public:
     // data
-    IP6Address ip6NetAddress;
+    click_ip6 ip6NetAddress;
     String source_or_dest = "not set"; /* will be assigned "src", "dst", "src or dst" or "src and dst" */   
 
     void compile(Classification::Wordwise::CompressedProgram& program);
@@ -42,7 +50,7 @@ public:
 
     void compile(Classification::Wordwise::CompressedProgram& program);
     void print();
-}
+};
 
 class IPECNPrimitive: public Primitive {
 public:
@@ -118,3 +126,25 @@ public:
     bool isSourcePort;  /* if false we know it is a Source port */
     uint16_t port;
 };
+
+class TCPOptionPrimitive: public Primitive {
+public:
+      
+};
+
+class NetworkLayerPrimitive: public Primitive {
+public:
+    int fromWhere;
+    int toWhere;
+    int valueToMatch;
+};
+
+class TransportLayerPrimitive: public Primitive {
+public:
+    int fromWhere;
+    int toWhere;
+    int valueToMatch;
+};
+
+CLICK_ENDDECLS
+#endif

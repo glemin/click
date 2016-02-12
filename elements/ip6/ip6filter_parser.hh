@@ -1,7 +1,11 @@
 #ifndef CLICK_IP6FILTER_PARSER_HH
 #define CLICK_IP6FILTER_PARSER_HH
+#include <click/glue.hh>
+#include <click/string.hh>
+CLICK_DECLS
 
-struct Parser { // ne parser zeker, mor wat diej doe is nog ni zu duidelijk
+class Parser2 { // ne parser zeker, mor wat diej doe is nog ni zu duidelijk
+public:
     const Vector<String> &_words; //  iet van woorde, wa ne const vector just is, weet ek oek ni direct..., wil da zegge da eens da ge diej initiatlized da er geen elementn ni meer kunne toegeveogd worre of is da toch iet anders..
     Vector<int> &_tree; // ne vagen boom der oek nog tusse, deze keer blijkbaar ni const
     Classification::Wordwise::Program &_program;       // dit is diej low level brol van hierboven!! das hetzelfde als _zprog !!
@@ -9,16 +13,16 @@ struct Parser { // ne parser zeker, mor wat diej doe is nog ni zu duidelijk
     ErrorHandler *_errh;
     Primitive _prev_prim;           // Waarom hebben we die prev prim nodig?????? EEEn wat happens when it is the first, is this then 0???? or so oo mthing eeelsee ..
 
-    Parser(const Vector<String> &words, Vector<int> &tree,  /* constructor does set all variables with : syntax, does nothing else */
+    Parser2(const Vector<String> &words, Vector<int> &tree,  /* constructor does set all variables with : syntax, does nothing else */
         Classification::Wordwise::Program &program,
         const Element *context, ErrorHandler *errh)
     : _words(words), _tree(tree), _program(program), _context(context),       // here we set all those variables
       _errh(errh) { }
 
-    struct ParseState {                  /* ParseState is a struct inside a struct */
+    struct ParseState2 {                  /* ParseState is a struct inside a struct */
         int stateNumber;
 	    int lastPosition;
-	    ParseState(int givenStateNumber) : stateNumber(givenStateNumber) { } /* constructor does set state variable with : syntax, does nothing else */
+	    ParseState2(int givenStateNumber) : stateNumber(givenStateNumber) { } /* constructor does set state variable with : syntax, does nothing else */
 	};
 	enum {      // s stands for state, or for statement
 	    s_expr0, s_expr1, s_expr2,          // These names are being used to give a name to all states in the push-down automata.
@@ -28,7 +32,33 @@ struct Parser { // ne parser zeker, mor wat diej doe is nog ni zu duidelijk
 	    s_factor0_neg, s_factor1_neg, s_factor2_neg // A book written by Hopcroft, Motwani and Ullman.
 	};
 
-	void parse_slot(int output, int pos);   // momenteel ongebruikt maar de functionaliteit zit in parse_program
+//	void parse_slot(int output, int pos);   // momenteel ongebruikt maar de functionaliteit zit in parse_program
 	int parse_expr_iterative(int pos);
 	int parse_primitive(int parsePosition, bool negatedSignSeenBeforePrimitive);  // functie die de functionaliteit bevat om tests te parsen, een test is: true, false, quals data of quals relop data
 };
+
+/* We check whether the given words adhere to the given syntax below and while doing that compile the expressions.
+
+ * expr ::= orexpr
+ *	|   orexpr ? expr : expr
+ * orexpr ::= orexpr || orexpr
+ *	|   orexpr or orexpr
+ *	|   term
+ * term ::= term && term
+ *	|   term and term
+ *	|   term factor			// juxtaposition = and
+ *	|   term
+ *  |
+ * factor ::= ! factor
+ *	|   ( expr )
+ *	|   primitive
+ * primitive ::= true
+ *	|   false
+ *	|   qualifiers data
+ *	|   qualifiers relationoperator data
+ 
+ Primitives themselves are again walked through, and are compiled on the fly.
+ */
+ 
+CLICK_ENDDECLS
+#endif
