@@ -1,7 +1,11 @@
 #ifndef CLICK_IP6FILTER_PARSER_HH
 #define CLICK_IP6FILTER_PARSER_HH
+
+#include <stdint.h>
 #include <click/glue.hh>
+#include <click/vector.hh>
 #include <click/string.hh>
+#include "elements/standard/classification.hh"
 CLICK_DECLS
 
 class Parser2 { // ne parser zeker, mor wat diej doe is nog ni zu duidelijk
@@ -34,7 +38,7 @@ public:
 
 //	void parse_slot(int output, int pos);   // momenteel ongebruikt maar de functionaliteit zit in parse_program
 	int parse_expr_iterative(int pos);
-	int parse_primitive(int parsePosition, bool negatedSignSeenBeforePrimitive);  // functie die de functionaliteit bevat om tests te parsen, een test is: true, false, quals data of quals relop data
+	int parse_primitive(int parsePosition, bool negatedSignSeenBeforePrimitive, Classification::Wordwise::Program& compileIntoThisProgram);  // functie die de functionaliteit bevat om tests te parsen, een test is: true, false, quals data of quals relop data
 };
 
 /* We check whether the given words adhere to the given syntax below and while doing that compile the expressions.
