@@ -114,6 +114,10 @@ void IPHostPrimitive::compile(Program& program, Vector<int> tree) {
     }
 }
 
+void IPNetPrimitive::compile(Program& program, Vector<int> tree) {
+
+}
+
 void IPVersionPrimitive::compile(Program& program, Vector<int> tree) {
     program.start_subtree(tree);
     program.add_insn(tree, offset_net, versionNumber, 0b11110000000000000000000000000000);

@@ -22,9 +22,9 @@ public:
     : _words(words), _tree(tree), _program(program), _context(context), _errh(errh) { } /* set all variables in the constructor */
 
     struct ParseState {                  /* ParseState is a struct inside a struct */
-        int stateNumber;
+        int state;
 	    int lastPosition;
-	    ParseState(int givenStateNumber) : stateNumber(givenStateNumber) { } /* constructor does set state variable with : syntax, does nothing else */
+	    ParseState(int givenStateNumber) : state(givenStateNumber) { } /* constructor does set state variable with : syntax, does nothing else */
 	};
 	enum {      // s stands for state, or for statement
 	    s_expr0, s_expr1, s_expr2,          // These names are being used to give a name to all states in the push-down automata.
