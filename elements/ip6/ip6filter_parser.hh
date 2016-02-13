@@ -3,30 +3,28 @@
 
 #include <stdint.h>
 #include <click/glue.hh>
+#include <click/element.hh>
 #include <click/vector.hh>
 #include <click/string.hh>
 #include "elements/standard/classification.hh"
 CLICK_DECLS
 
-class Parser2 { // ne parser zeker, mor wat diej doe is nog ni zu duidelijk
+class Parser { // ne parser zeker, mor wat diej doe is nog ni zu duidelijk
 public:
     const Vector<String> &_words; //  iet van woorde, wa ne const vector just is, weet ek oek ni direct..., wil da zegge da eens da ge diej initiatlized da er geen elementn ni meer kunne toegeveogd worre of is da toch iet anders..
     Vector<int> &_tree; // ne vagen boom der oek nog tusse, deze keer blijkbaar ni const
     Classification::Wordwise::Program &_program;       // dit is diej low level brol van hierboven!! das hetzelfde als _zprog !!
-    const Element *_context;        // een element wordt hier een context genoemd => not sure why :d
-    ErrorHandler *_errh;
+    const Element* _context;        // een element wordt hier een context genoemd => not sure why :d
+    ErrorHandler* _errh;
     Primitive _prev_prim;           // Waarom hebben we die prev prim nodig?????? EEEn wat happens when it is the first, is this then 0???? or so oo mthing eeelsee ..
 
-    Parser2(const Vector<String> &words, Vector<int> &tree,  /* constructor does set all variables with : syntax, does nothing else */
-        Classification::Wordwise::Program &program,
-        const Element *context, ErrorHandler *errh)
-    : _words(words), _tree(tree), _program(program), _context(context),       // here we set all those variables
-      _errh(errh) { }
+    Parser(const Vector<String> &words, Vector<int> &tree, Classification::Wordwise::Program &program, const Element *context, ErrorHandler *errh) 
+    : _words(words), _tree(tree), _program(program), _context(context), _errh(errh) { } /* set all variables in the constructor */
 
-    struct ParseState2 {                  /* ParseState is a struct inside a struct */
+    struct ParseState {                  /* ParseState is a struct inside a struct */
         int stateNumber;
 	    int lastPosition;
-	    ParseState2(int givenStateNumber) : stateNumber(givenStateNumber) { } /* constructor does set state variable with : syntax, does nothing else */
+	    ParseState(int givenStateNumber) : stateNumber(givenStateNumber) { } /* constructor does set state variable with : syntax, does nothing else */
 	};
 	enum {      // s stands for state, or for statement
 	    s_expr0, s_expr1, s_expr2,          // These names are being used to give a name to all states in the push-down automata.

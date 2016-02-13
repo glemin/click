@@ -114,6 +114,7 @@ AddressInfo, tcpdump(1) */
 
 enum {  /* temporarily */
     // if you change this, change click-fastclassifier.cc also
+    // if you change this, also update the same enum in ip6filter_classes.cc
     offset_mac = 0,
     offset_net = 256,       
     offset_transp = 512,
