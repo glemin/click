@@ -68,14 +68,21 @@ void ICMPTypePrimitive::print() {
 }
 
 void IPHostPrimitive::compile(Program& program, Vector<int> tree) {
+    cout << "c0" << endl;
     if (source_or_destination == "src") {
+        cout << "c1" << endl;
         program.add_insn(tree, offset_net + 8, ip6Address.data32()[0], 0b11111111111111111111111111111111);      // offset_net +8 to +20 contain the source address in an IPv6 packet
+        cout << "c2" << endl;
         program.add_insn(tree, offset_net + 12, ip6Address.data32()[1], 0b11111111111111111111111111111111);
         program.add_insn(tree, offset_net + 16, ip6Address.data32()[2], 0b11111111111111111111111111111111);
+        cout << "c3" << endl,
         program.add_insn(tree, offset_net + 20, ip6Address.data32()[3], 0b11111111111111111111111111111111);
+        cout << "c4" << endl;
 
         program.finish_subtree(tree, Classification::c_and);
+        cout << "c5" << endl;
     } else if (source_or_destination == "dst") {
+        cout << "c6" << endl;
         program.add_insn(tree, offset_net + 24, ip6Address.data32()[0], 0b11111111111111111111111111111111);      // offset_net +24 to +36 contain the destination address in an IPv6 packet
         program.add_insn(tree, offset_net + 28, ip6Address.data32()[1], 0b11111111111111111111111111111111);
         program.add_insn(tree, offset_net + 32, ip6Address.data32()[2], 0b11111111111111111111111111111111);

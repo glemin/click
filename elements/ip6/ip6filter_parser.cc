@@ -5,10 +5,12 @@
 #include "ip6filter_classes.hh"
 #include "ip6filter_parser.hh"
 #include <stack>
+#include <iostream>
 CLICK_DECLS
 
 using Classification::Wordwise::Program;
 using std::stack;
+using namespace std;
 
 int Parser::parse_primitive(int position, bool negatedSignSeenBeforePrimitive, Program& compileIntoThisProgram) {
 
@@ -177,6 +179,7 @@ int Parser::parse_primitive(int position, bool negatedSignSeenBeforePrimitive, P
                     return -10; /* parsing failed */
                 primitive.compile(compileIntoThisProgram, _tree);
                 
+                cout << "we gaan returnen" << endl;
                 return position + 3;
             }
         } else if (_words[position+1] == "net") {
@@ -332,16 +335,18 @@ int Parser::parse_expr_iterative(int pos) {
     stk.push_back(ParseState(s_expr0));
 
     while (stk.size()) {
-	ParseState &ps = stk.back();
+	ParseState &ps = stk.back();    /* look at top of stack */
 	int new_state = -1;
 
 	switch (ps.state) {
 	case s_expr0:
+	    cout << "s_expr0" << endl;
 	    _program.start_subtree(_tree);
 	    ps.state = s_expr1;
 	    new_state = s_orexpr0;
 	    break;
 	case s_expr1:
+	    cout << "s_expr1" << endl;
 	    if (pos >= _words.size() || _words[pos] != "?")
 		goto finish_expr;
 	    ++pos;
@@ -349,6 +354,7 @@ int Parser::parse_expr_iterative(int pos) {
 	    new_state = s_expr0;
 	    break;
 	case s_expr2:
+	    cout << "s_expr2" << endl;
 	    if (pos == ps.lastPosition || pos >= _words.size() || _words[pos] != ":") {
 		_errh->error("missing %<:%> in ternary expression");
 		goto finish_expr;
@@ -358,31 +364,37 @@ int Parser::parse_expr_iterative(int pos) {
 	    new_state = s_orexpr0;
 	    break;
 	finish_expr:
+	    cout << "finish normal expression" << endl;
 	    _program.finish_subtree(_tree, Classification::c_ternary);
 	    break;
 
 	case s_orexpr0:
+	    cout << "s_orexpr0" << endl;
 	    _program.start_subtree(_tree);
 	    ps.state = s_orexpr1;
 	    new_state = s_term0;
 	    break;
 	case s_orexpr1:
+	    cout << "s_orexpr1" << endl;
 	    if (pos >= _words.size() || (_words[pos] != "or" && _words[pos] != "||"))
 		goto finish_orexpr;
 	    ++pos;
 	    new_state = s_term0;
 	    break;
 	finish_orexpr:
+	    cout << "finish or-expression" << endl;
 	    _program.finish_subtree(_tree, Classification::c_or);
 	    break;
 
 	case s_term0:
+	    cout << "s_term0" << endl;
 	    _program.start_subtree(_tree);
 	    ps.state = s_term1;
 	    new_state = s_factor0;
 	    break;
 	case s_term1:
 	case s_term2:
+	    cout << "s_term1 (or s_term2) | don't know which one" << endl;
 	    if (pos == ps.lastPosition) {
 		if (ps.state == s_term1)
 		    _errh->error("missing expression");
@@ -396,11 +408,13 @@ int Parser::parse_expr_iterative(int pos) {
 	    new_state = s_factor0;
 	    break;
 	finish_term:
+	    cout << "finish term" << endl;
 	    _program.finish_subtree(_tree);
 	    break;
 
 	case s_factor0:
 	case s_factor0_neg:
+	    cout << "s_factor0 (or s_factor0_neg) | don't know which one" << endl;	
 	    if (pos < _words.size() && (_words[pos] == "not" || _words[pos] == "!")) {
 		ps.state += (s_factor1 - s_factor0);
 		new_state = (ps.state == s_factor1 ? s_factor0_neg : s_factor0);
@@ -414,11 +428,13 @@ int Parser::parse_expr_iterative(int pos) {
 	    break;
 	case s_factor1:
 	case s_factor1_neg:
+	    cout << "s_factor1 (or s_factor1_neg) | don't know which one" << endl;	
 	    if (pos == ps.lastPosition)
 		_errh->error("missing expression after %<%s%>", _words[pos - 1].c_str());
 	    break;
 	case s_factor2:
 	case s_factor2_neg:
+	    cout << "s_factor2 (or s_factor2_neg) | don't know which one" << endl;	
 	    if (pos == ps.lastPosition)
 		_errh->error("missing expression after %<(%>");
 	    if (pos < _words.size() && _words[pos] == ")")
