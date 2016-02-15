@@ -27,11 +27,20 @@ public:
 	    ParseState(int givenStateNumber) : state(givenStateNumber) { } /* constructor does set state variable with : syntax, does nothing else */
 	};
 	enum {      // s stands for state, or for statement
-	    s_expr0, s_expr1, s_expr2,          // These names are being used to give a name to all states in the push-down automata.
-	    s_orexpr0, s_orexpr1,               // As well as being used as Stack symbols that can be pushed on the stack or consumed.
-	    s_term0, s_term1, s_term2,          // If the stack empties, we arrive in a final state and the parsing has ended.
-        s_factor0, s_factor1, s_factor2,    // For more information on this topic view "Introduction to automata theory, languages and computation".
-	    s_factor0_neg, s_factor1_neg, s_factor2_neg // A book written by Hopcroft, Motwani and Ullman.
+	    s_expr0, 
+	    s_expr1, 
+	    s_expr2,          // These names are being used to give a name to all states in the push-down automata.
+	    s_orexpr0, 
+	    s_orexpr1,               // As well as being used as Stack symbols that can be pushed on the stack or consumed.
+	    s_term0, 
+	    s_term1, 
+	    s_term2,          // If the stack empties, we arrive in a final state and the parsing has ended.
+        s_factor0, 
+        s_factor1, 
+        s_factor2,    // For more information on this topic view "Introduction to automata theory, languages and computation".
+	    s_factor0_neg, 
+	    s_factor1_neg, 
+	    s_factor2_neg // A book written by Hopcroft, Motwani and Ullman.
 	};
 
 //	void parse_slot(int output, int pos);   // momenteel ongebruikt maar de functionaliteit zit in parse_program

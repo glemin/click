@@ -346,9 +346,9 @@ int Parser::parse_expr_iterative(int pos) {
 	    new_state = s_orexpr0;
 	    break;
 	case s_expr1:
-	    cout << "s_expr1" << endl;
+        cout << "s_expr1" << endl;
 	    if (pos >= _words.size() || _words[pos] != "?")
-		goto finish_expr;
+		    goto finish_expr;
 	    ++pos;
 	    ps.state = s_expr2;
 	    new_state = s_expr0;
@@ -356,7 +356,7 @@ int Parser::parse_expr_iterative(int pos) {
 	case s_expr2:
 	    cout << "s_expr2" << endl;
 	    if (pos == ps.lastPosition || pos >= _words.size() || _words[pos] != ":") {
-		_errh->error("missing %<:%> in ternary expression");
+		    _errh->error("missing %<:%> in ternary expression");
 		goto finish_expr;
 	    }
 	    ++pos;
@@ -401,8 +401,8 @@ int Parser::parse_expr_iterative(int pos) {
 		goto finish_term;
 	    }
 	    if (pos < _words.size() && (_words[pos] == "and" || _words[pos] == "&&")) {
-		ps.state = s_term1;
-		++pos;
+		    ps.state = s_term1;
+		    ++pos;
 	    } else
 		ps.state = s_term2;
 	    new_state = s_factor0;
@@ -414,17 +414,17 @@ int Parser::parse_expr_iterative(int pos) {
 
 	case s_factor0:
 	case s_factor0_neg:
-	    cout << "s_factor0 (or s_factor0_neg) | don't know which one" << endl;	
+	    cout << "s_factor0 (or s_factor0_neg) | don't know which one" << endl;
 	    if (pos < _words.size() && (_words[pos] == "not" || _words[pos] == "!")) {
-		ps.state += (s_factor1 - s_factor0);
-		new_state = (ps.state == s_factor1 ? s_factor0_neg : s_factor0);
-		++pos;
+		    ps.state += 1;  /* s_factor0 becomes s_factor1 and s_factor0_neg becomes s_factor1_neg */
+		    new_state = (ps.state == s_factor1 ? s_factor0_neg : s_factor0);    /* if it would become s_factor1_neg we get a double reverse hence back a normal s_factor0 */
+		    ++pos;
 	    } else if (pos < _words.size() && _words[pos] == "(") {
-		ps.state += (s_factor2 - s_factor0);
-		new_state = s_expr0;
-		++pos;
+		    ps.state += 2;  /* s_factor0 becomes s_factor2 and s_factor0_neg becomes s_factor2_neg */
+		    new_state = s_expr0;
+		    ++pos;
 	    } else
-		pos = parse_primitive(pos, ps.state == s_factor0_neg, _program);
+		    pos = parse_primitive(pos, ps.state == s_factor0_neg, _program);
 	    break;
 	case s_factor1:
 	case s_factor1_neg:
@@ -436,13 +436,13 @@ int Parser::parse_expr_iterative(int pos) {
 	case s_factor2_neg:
 	    cout << "s_factor2 (or s_factor2_neg) | don't know which one" << endl;	
 	    if (pos == ps.lastPosition)
-		_errh->error("missing expression after %<(%>");
+		    _errh->error("missing expression after %<(%>");
 	    if (pos < _words.size() && _words[pos] == ")")
-		++pos;
-	    else if (pos != ps.lastPosition)
-		_errh->error("missing %<)%>");
+		    ++pos;
+	    else if (pos != ps.lastPosition)    /* moet dit nog een else if zijn? weten we al niet dat we de laatste positie voorbij zijn? kan dit niet gewoon else zijn dan? */
+		    _errh->error("missing %<)%>");
 	    if (ps.state == s_factor2_neg)
-		_program.negate_subtree(_tree);
+		    _program.negate_subtree(_tree);
 	    break;
 	}
 

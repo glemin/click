@@ -183,17 +183,29 @@ Insn::unparse() const
 Vector<int>
 Program::init_subtree() const
 {
-    Vector<int> tree(_insn.size() + 1, -1);
-    tree[0] = 0;
+    Vector<int> tree(_insn.size() + 1, -1);             // _insn.size() + 1 ints with value -1
+    tree[0] = 0;                            // we starten op niveau 0 betekent dit volgens mij , op plek tree[0] houden we denk ik bij op welk niveau we ons bevinden
     return tree;
 }
 
 void
 Program::start_subtree(Vector<int> &tree) const
 {
-    ++tree[0];
+    ++tree[0];                                          // TODO maybe this indicates how many children you have in this branch
 }
 
+/*
+@brief Add an instruction to our tree that we need to walk through.
+
+A part of our packet will be matched against a 32-bit word. Of that 32-bit word where our data will be matched against, only a few bits will be of interest. These bits will be marked with a 1 in our mask.
+
+We walk by jumps of 32-bits in our packet to the part we are interested in, and use the offset to determine how often we need to jump. Then after that number of jumps we arrived at the 32-bit word we are interested in comparing with our "value" word. If those words match on the by mask given position, we follow the yes branch of the tree, otherwise we follow the no branch of the tree.
+
+@param tree Instruction tree that needs to be walked through
+@param offset Which part of the packet do we need to check to decide which branch of the tree we need to follow?
+@param value Which value do we need to have to follow the "yes" branch
+@param mask Which part of the 32-bit part we need to take into consideration.
+*/
 void
 Program::add_insn(Vector<int> &tree, int offset, uint32_t value, uint32_t mask)
 {
@@ -202,36 +214,42 @@ Program::add_insn(Vector<int> &tree, int offset, uint32_t value, uint32_t mask)
     _output_everything = -1;
 }
 
+// (private function) in this function we change j_success with an actual success, and j_failure with an actual failure
+// TODO misschien ga je de subtree nu naar andere jups sturen, in plaats van naar j_success te gaan bij een succes gaan we nu naar het meegegeven succes.
+// En in plaats van naar j_failure te gaan bij een mislukking, gaan we nu naar failure
+// Je gaat het "verkeer" van je boom nu anders leiden
 void
 Program::redirect_subtree(int first, int last, int success, int failure)
 {
     for (int i = first; i < last; ++i) {
 	Insn &in = _insn[i];
-	for (int k = 0; k < 2; ++k)
+	for (int k = 0; k < 2; ++k)         // each instruction has 2 jump options: one on success and one on failure
 	    if (in.j[k] == j_success)
-		in.j[k] = success;
+		in.j[k] = success;              // we change j_success (which is a placeholder for "I don't know the jump value on success yet"), with an actual jump
 	    else if (in.j[k] == j_failure)
-		in.j[k] = failure;
+		in.j[k] = failure;              // we change j_failure (which is a placeholder for "I don't know the jump value on failure yet"), with an actual jump
     }
 }
 
 void
-Program::finish_subtree(Vector<int> &tree, Combiner combiner,
-			int success, int failure)
+Program::finish_subtree(Vector<int> &tree, Combiner combiner, int success, int failure) // for default arguments, see classification.hh
 {
-    int level = tree[0];
+    int level = tree[0];            // op plek 0 schrijven we op welk level we werken!!
+                                    // dus daarom doen we in het begin van een nieuwe subtree ++tree[0] om dat van niveau 1tje naar omhoog te doen ;)
+                                    // het startniveau, dus zonder subtrees is 0 :)
 
-    // 'subtrees' contains pointers to trees at level 'level'
+    // 'subtrees' will contain pointers (in integer format) to trees at the level 'level'
     Vector<int> subtrees;
     {
 	// move backward to parent subtree
-	int ptr = _insn.size();
-	while (ptr > 0 && (tree[ptr] < 0 || tree[ptr] >= level))
+	int ptr = _insn.size();             // _insn.size geeft het aantal instructies dat momenteel al zijn toegevoegd aan het programma
+                                        // we beginnen dus met een pointer helemaal achteraan! En die gaan we stilaan naar voor laten wandelen!
+	while (ptr > 0 && (tree[ptr] < 0 || tree[ptr] >= level))    // TODO -1 means no children?? or?? and maybe also unitialized??
 	    --ptr;
 	// collect child subtrees
 	for (++ptr; ptr <= _insn.size(); ++ptr)
 	    if (tree[ptr] == level)
-		subtrees.push_back(ptr - 1);
+		subtrees.push_back(ptr - 1);            // hier gaan we onze subtree vullen  ; waarom we ptr - 1 pushen zie ik niet
     }
 
     if (subtrees.size()) {
@@ -239,9 +257,9 @@ Program::finish_subtree(Vector<int> &tree, Combiner combiner,
 	// combine subtrees
 
 	// first mark all subtrees as next higher level
-	tree[subtrees[0] + 1] = level - 1;
+	tree[subtrees[0] + 1] = level - 1;      // 1 vakje verder dan u subtrees ga je zetten op level - 1 => niet helemaal duidelijk waarom
 	for (int e = subtrees[0] + 2; e <= _insn.size(); e++)
-	    tree[e] = -1;
+	    tree[e] = -1;                       // daarna ga je voor alles vanaf subtrees[0] + 2
 
 	// loop over expressions
 	int t;
@@ -260,9 +278,9 @@ Program::finish_subtree(Vector<int> &tree, Combiner combiner,
 		    redirect_subtree(next, next2, success, failure);
 		    t++;
 		} else		// like c_and
-		    redirect_subtree(first, next, next, failure);
+		    redirect_subtree(first, next, next, failure);       
 	    } else
-		redirect_subtree(first, next, success, failure);
+		redirect_subtree(first, next, success, failure);        // TODO ik had persoonlijk eerder een error gethrowed
 	}
 
 	if (t < subtrees.size()) {
@@ -271,7 +289,7 @@ Program::finish_subtree(Vector<int> &tree, Combiner combiner,
 	}
     }
 
-    --tree[0];
+    --tree[0];      // we go back a level lower I guess
 }
 
 void
@@ -280,8 +298,8 @@ Program::negate_subtree(Vector<int> &tree, bool flip_short)
     // swap 'j_success' and 'j_failure' within the last subtree
     int level = tree[0];
     int first = _insn.size() - 1;
-    while (first >= 0 && tree[first+1] != level)
-	--first;
+    while (first >= 0 && tree[first+1] != level)                    // achteraan zijn de subtrees van het level waar we nu mee bezig zijn, en je mag maar wandelen tot
+	--first;                                                        // (cont'd) ofwel het begin, ofwel tot aan het huidige niveau
 
     for (int i = first; i >= 0 && i < _insn.size(); i++) {
 	Insn &e = _insn[i];

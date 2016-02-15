@@ -28,22 +28,23 @@ namespace Wordwise {
 class DominatorOptimizer;
 
 
-struct Insn {
+class Insn {
+public:
     uint16_t offset;
     uint8_t padding;
     uint8_t short_output;
     union {
-	unsigned char c[4];
-	uint32_t u;
+	    unsigned char c[4];
+	    uint32_t u;
     } mask;
     union {
-	unsigned char c[4];
-	uint32_t u;
+	    unsigned char c[4];
+	    uint32_t u;
     } value;
     int32_t j[2];
 
     enum {
-	width = 4
+	    width = 4
     };
 
     Insn(int offset_, uint32_t value_, uint32_t mask_,
@@ -121,11 +122,10 @@ struct Insn {
     String unparse() const;
 
     static int compare(const Insn &a, const Insn &b) {
-	return memcmp(&a, &b, 12);
+	    return memcmp(&a, &b, 12);
     }
 
-  private:
-
+private:
     inline bool implies_short_ok(bool direction, const Insn &x, bool next_direction, unsigned known_length) const {
 	// Common cases.
 	if (short_output != direction || offset + 4 <= (int) known_length)
@@ -137,6 +137,8 @@ struct Insn {
     bool hard_implies_short_ok(bool direction, const Insn &x, bool next_direction, unsigned known_length) const;
 
 };
+
+
 
 StringAccum &operator<<(StringAccum &sa, const Insn &insn);
 
@@ -185,8 +187,7 @@ class Program { public:
      * @param flip_short If true, then also flip whether short packets
      *   match. */
     void negate_subtree(Vector<int> &tree, bool flip_short = false);
-    void finish_subtree(Vector<int> &tree, Combiner op = c_and,
-			int success = j_success, int failure = j_failure);
+    void finish_subtree(Vector<int> &tree, Combiner op = c_and, int success = j_success, int failure = j_failure);
 
     void combine_compatible_states();
     void remove_unused_states();
