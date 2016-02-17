@@ -349,12 +349,12 @@ int Parser::parse_expr_iterative(int pos) {
 	    statePositionPair.state = s_expr1;
 	    new_state = s_orexpr0;
 	    break;
-	case s_expr1:
+	case s_expr1:                               /* does an expr statement match */
         cout << "s_expr1" << endl;
 	    if (pos >= _words.size() || _words[pos] != "?")
 		    goto finish_expr;
-	    ++pos;
-	    statePositionPair.state = s_expr2;
+	    ++pos;          
+	    statePositionPair.state = s_expr2;      /* if the first part matches check the second part */
 	    new_state = s_expr0;
 	    break;
 	case s_expr2:
@@ -364,10 +364,10 @@ int Parser::parse_expr_iterative(int pos) {
 		goto finish_expr;
 	    }
 	    ++pos;
-	    statePositionPair.state = s_expr1;
+	    statePositionPair.state = s_expr1;      /* the second part matches so we assume an other expr statement can be build */
 	    new_state = s_orexpr0;
 	    break;
-	finish_expr:
+	finish_expr:                                /* we have seen the last expression statement */
 	    cout << "finish normal expression" << endl;
 	    _program.finish_subtree(_tree, Classification::c_ternary);
 	    break;
@@ -381,11 +381,11 @@ int Parser::parse_expr_iterative(int pos) {
 	case s_orexpr1:
 	    cout << "s_orexpr1" << endl;
 	    if (pos >= _words.size() || (_words[pos] != "or" && _words[pos] != "||"))
-		goto finish_orexpr;
+    		goto finish_orexpr;
 	    ++pos;
 	    new_state = s_term0;
 	    break;
-	finish_orexpr:
+	finish_orexpr:          /* I think this means we have seen the last or statement */
 	    cout << "finish or-expression" << endl;
 	    _program.finish_subtree(_tree, Classification::c_or);
 	    break;
@@ -443,7 +443,7 @@ int Parser::parse_expr_iterative(int pos) {
 	case s_factor1_neg:
 	    cout << "s_factor1 (or s_factor1_neg) | don't know which one" << endl;	
 	    if (pos == statePositionPair.position)
-		_errh->error("missing expression after %<%s%>", _words[pos - 1].c_str());
+    		_errh->error("missing expression after %<%s%>", _words[pos - 1].c_str());
 	    break;
 	case s_factor2:
 	case s_factor2_neg:
