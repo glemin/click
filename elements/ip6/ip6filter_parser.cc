@@ -16,13 +16,13 @@ int Parser::parse_primitive(int position, bool negatedSignSeenBeforePrimitive, P
 
 //    constexpr int pos = position;
 //    int currentWord = _words[position];
-    
+
     // error handling
     if (position >= _words.size())
 	    return position;    /* out of range */
 	if (_words[position] == ")" || _words[position] == "||" || _words[position] == "?" || _words[position] == ":" || _words[position] == "or" )
 	    return position;    /* non-acceptable first word */
-	  
+
 	// start of parsing
 	if (_words[position] == "true") {
 	    compileIntoThisProgram.add_insn(_tree, 0, 0, 0);  /* everything matches with mask 0 */
@@ -179,6 +179,8 @@ int Parser::parse_primitive(int position, bool negatedSignSeenBeforePrimitive, P
                     return -10; /* parsing failed */
                 primitive.compile(compileIntoThisProgram, _tree);
                 
+                cout << "position = " << position << endl;
+                cout << "position + 3 = " << position + 3 << endl;
                 cout << "we gaan returnen" << endl;
                 return position + 3;
             }
@@ -330,156 +332,166 @@ int Parser::parse_primitive(int position, bool negatedSignSeenBeforePrimitive, P
  *	|   qualifiers relationoperator data
  */
  
-int Parser::parse_expr_iterative(int pos) { 
-    Vector<StatePositionPair> stk;
+int Parser::parse() {
+    int pos = 1;
+
+    Vector<StatePositionPair> statePositionPairList;
     
     StatePositionPair statePositionPair;
     statePositionPair.state = EXPR0;
     
-    stk.push_back(statePositionPair);
+    statePositionPairList.push_back(statePositionPair);
 
-    while (stk.size()) {
-	StatePositionPair &statePositionPair = stk.back();    /* look at top of stack */
-	State new_state = unknown;
+    while (statePositionPairList.size() > 0) {
+	    StatePositionPair &statePositionPair = statePositionPairList.back();    /* look at top of stack */
+	    State new_state = unknown;
 
-	switch (statePositionPair.state) {
-	case EXPR0:
-	    cout << "EXPR0" << endl;
-	    _program.start_subtree(_tree);
-	    statePositionPair.state = EXPR1;
-	    
-	    new_state = OR_EXPR0;
-	    break;
-	case EXPR1:                               /* does an expr statement match */
-        cout << "EXPR1" << endl;
-	    if (pos >= _words.size() || _words[pos] != "?")
-		    goto finish_expr;
-	    ++pos;          
-	    statePositionPair.state = EXPR2;      /* if the first part matches check the second part */
-	    
-	    new_state = EXPR0;
-	    break;
-	case EXPR2:
-	    cout << "EXPR2" << endl;
-	    if (pos == statePositionPair.position || pos >= _words.size() || _words[pos] != ":") {
-		    _errh->error("missing %<:%> in ternary expression");
-		goto finish_expr;
-	    }
-        pos++;
-	    statePositionPair.state = EXPR1;      /* the second part matches so we assume an other expr statement can be build */
-	    
-	    new_state = OR_EXPR0;
-	    break;
-	finish_expr:                                /* we have seen the last expression statement */
-	    cout << "finish normal expression" << endl;
-	    _program.finish_subtree(_tree, Classification::c_ternary);
-	    break;
-
-	case OR_EXPR0:
-	    cout << "OR_EXPR0" << endl;
-	    _program.start_subtree(_tree);
-	    statePositionPair.state = OR_EXPR1;
-	    
-	    new_state = TERM0;
-	    break;
-	case OR_EXPR1:
-	    cout << "OR_EXPR1" << endl;
-	    if (pos >= _words.size() || (_words[pos] != "or" && _words[pos] != "||"))
-    		goto finish_orexpr;
-	    pos++;
-	    
-	    new_state = TERM0;
-	    break;
-	finish_orexpr:          /* I think this means we have seen the last or statement */
-	    cout << "finish or-expression" << endl;
-	    _program.finish_subtree(_tree, Classification::c_or);
-	    break;
-
-	case TERM0:
-	    cout << "TERM0" << endl;
-	    _program.start_subtree(_tree);
-	    statePositionPair.state = TERM1;
-	    
-	    new_state = FACTOR0;
-	    break;
-	case TERM1:
-	case TERM2:
-	    cout << "TERM1 (or TERM2) | don't know which one" << endl;
-	    if (pos == statePositionPair.position) {
-		    if (statePositionPair.state == TERM1)
-		        _errh->error("missing expression");
-	        goto finish_term;
-	    }
-	    if (pos < _words.size() && (_words[pos] == "and" || _words[pos] == "&&")) {
-		    statePositionPair.state = TERM1;
-		    pos++;
-	    } else
-		    statePositionPair.state = TERM2;
-		    
-	    new_state = FACTOR0;
-	    break;
-	finish_term:
-	    cout << "finish term" << endl;
-	    _program.finish_subtree(_tree);
-	    break;
-
-	case FACTOR0:
-	case NEGATED_FACTOR0:
-	    cout << "FACTOR0 (or NEGATED_FACTOR0) | don't know which one" << endl;
-	    if (pos < _words.size() && (_words[pos] == "not" || _words[pos] == "!")) {
-	        if (statePositionPair.state == FACTOR0) {
-	            statePositionPair.state = FACTOR1;
-	            
-	            new_state = NEGATED_FACTOR0;  /* we negate because we found a not sign => s_factor0 thus became s_factor0_neg */
-	        } else {    // it is s_factor0_neg
-	            statePositionPair.state = NEGATED_FACTOR1;
-	            
-	            new_state = FACTOR0;      /* we negate because we found a not sign => s_factor0_neg (already negated) becomes s_factor0 because it got negated 2 times */
-	        }
-		    pos++;
-	    } else if (pos < _words.size() && _words[pos] == "(") {
-	        if (statePositionPair.state == FACTOR0) {
-	            statePositionPair.state = FACTOR2;
-	        } else {      // it is s_factor0_neg
-	            statePositionPair.state = NEGATED_FACTOR2;
-	        }
+	    switch (statePositionPair.state) {              /* Head track EXPR0 -> OR_EXPR0 -> TERM0 -> FACTOR0 */
+        case EXPR0:
+	        cout << "EXPR0" << endl;
+	        _program.start_subtree(_tree);
 	        
-		    new_state = EXPR0;
-		    pos++;
-	    } else
-		    pos = parse_primitive(pos, statePositionPair.state == NEGATED_FACTOR0, _program);
-	    break;
-	case FACTOR1:
-	case NEGATED_FACTOR1:
-	    cout << "FACTOR1 (or NEGATED_FACTOR1) | don't know which one" << endl;	
-	    if (pos == statePositionPair.position)
-    		_errh->error("missing expression after %<%s%>", _words[pos - 1].c_str());
-	    break;
-	case FACTOR2:
-	case NEGATED_FACTOR2:
-	    cout << "FACTOR2 (or NEGATED_FACTOR2) | don't know which one" << endl;	
-	    if (pos == statePositionPair.position)
-		    _errh->error("missing expression after %<(%>");
-	    if (pos < _words.size() && _words[pos] == ")")
+	        statePositionPair.state = EXPR1;
+	    
+	        new_state = OR_EXPR0;
+	        break;
+        case EXPR1:                                     /* EXPR1 -> EXPR2 -> EXPR1 -> EXPR2 -> EXPR1 -> EXPR2 -> EXPR1 -> ...  as many times as needed */
+ //           cout << "EXPR1" << endl;
+            if (pos >= _words.size() || _words[pos] != "?") // something went wrong
+	            goto finish_expr;
+            pos++;              /* because we readed a character */          
+            statePositionPair.state = EXPR2;      /* if the first part matches check the second part */
+            
+            new_state = EXPR0;
+            break;
+	    case EXPR2:
+	        cout << "EXPR2" << endl;
+	        if (pos == statePositionPair.position || pos >= _words.size() || _words[pos] != ":") {
+		        _errh->error("missing %<:%> in ternary expression");        // Dit is een echte fout want na een ? moet een uitdrukking komen en daarna een : .
+		        goto finish_expr;
+	        }
+            pos++;              /* because we again readed a character */
+	        statePositionPair.state = EXPR1;      /* the second part matches so we assume an other expr statement can be build */
+	        
+	        new_state = OR_EXPR0;
+	        break;
+	        
+        finish_expr:                                // we gaan naar finish_expr als er iets mis is gelopen lijkt mij => PECH gehad => Deze weg lijkt niet te lukken.
+  //          cout << "finish normal expression" << endl;
+            _program.finish_subtree(_tree, Classification::c_ternary);
+            break;
+
+	    case OR_EXPR0:                              /* OR_EXPR1 ->  */
+            cout << "OR_EXPR0" << endl;
+	        _program.start_subtree(_tree);
+	        statePositionPair.state = OR_EXPR1;
+	        
+	        new_state = TERM0;
+	        break;
+	    case OR_EXPR1:
+	        cout << "OR_EXPR1" << endl;
+	        if (pos >= _words.size() || (_words[pos] != "or" && _words[pos] != "||"))
+        		goto finish_orexpr;
 	        pos++;
-	    else if (pos != statePositionPair.position)    /* moet dit nog een else if zijn? weten we al niet dat we de laatste positie voorbij zijn? kan dit niet gewoon else zijn dan? */
-		    _errh->error("missing %<)%>");
-	    if (statePositionPair.state == NEGATED_FACTOR2)
-		    _program.negate_subtree(_tree);
-	    break;
-	case unknown:
-        // this should not happen, return an error
-        break;
+	        
+	        new_state = TERM0;
+	        break;
+	        
+	    finish_orexpr:          /* I think this means we have seen the last or statement */
+	        cout << "finish or-expression" << endl;
+	        _program.finish_subtree(_tree, Classification::c_or);
+	        break;
+
+	    case TERM0:
+	        cout << "TERM0" << endl;
+	        _program.start_subtree(_tree);
+	        statePositionPair.state = TERM1;
+	        
+	        new_state = FACTOR0;
+	        break;
+	    case TERM1:
+	    case TERM2:
+	        cout << "TERM1 (or TERM2) | don't know which one" << endl;
+	        if (pos == statePositionPair.position) {
+		        if (statePositionPair.state == TERM1)
+		            _errh->error("missing expression");
+	            goto finish_term;
+	        }
+	        if (pos < _words.size() && (_words[pos] == "and" || _words[pos] == "&&")) {
+		        statePositionPair.state = TERM1;
+		        pos++;
+	        } else
+		        statePositionPair.state = TERM2;
+		        
+	        new_state = FACTOR0;
+	        break;
+	    finish_term:
+	        cout << "finish term" << endl;
+	        _program.finish_subtree(_tree);
+	        break;
+
+	    case FACTOR0:
+	    case NEGATED_FACTOR0:
+	        cout << "FACTOR0 (or NEGATED_FACTOR0) | don't know which one" << endl;
+	        if (pos < _words.size() && (_words[pos] == "not" || _words[pos] == "!")) {
+	            if (statePositionPair.state == FACTOR0) {
+	                statePositionPair.state = FACTOR1;
+	                
+	                new_state = NEGATED_FACTOR0;  /* we negate because we found a not sign => s_factor0 thus became s_factor0_neg */
+	            } else {    // it is s_factor0_neg
+	                statePositionPair.state = NEGATED_FACTOR1;
+	                
+	                new_state = FACTOR0;      /* we negate because we found a not sign => s_factor0_neg (already negated) becomes s_factor0 because it got negated 2 times */
+	            }
+		        pos++;
+	        } else if (pos < _words.size() && _words[pos] == "(") {
+	            if (statePositionPair.state == FACTOR0) {
+	                statePositionPair.state = FACTOR2;
+	            } else {      // it is s_factor0_neg
+	                statePositionPair.state = NEGATED_FACTOR2;
+	            }
+	            
+		        new_state = EXPR0;
+		        pos++;
+	        } else
+	            cout << "1" << endl;
+		        pos = parse_primitive(pos, statePositionPair.state == NEGATED_FACTOR0, _program);
+	        break;
+	    case FACTOR1:
+	    case NEGATED_FACTOR1:
+	        cout << "FACTOR1 (or NEGATED_FACTOR1) | don't know which one" << endl;	
+	        if (pos == statePositionPair.position)
+        		_errh->error("missing expression after %<%s%>", _words[pos - 1].c_str());
+	        break;
+	    case FACTOR2:
+	    case NEGATED_FACTOR2:
+	        cout << "FACTOR2 (or NEGATED_FACTOR2) | don't know which one" << endl;	
+	        if (pos == statePositionPair.position)
+		        _errh->error("missing expression after %<(%>");
+	        if (pos < _words.size() && _words[pos] == ")")
+	            pos++;
+	        else if (pos != statePositionPair.position)    /* moet dit nog een else if zijn? weten we al niet dat we de laatste positie voorbij zijn? kan dit niet gewoon else zijn dan? */
+		        _errh->error("missing %<)%>");
+	        if (statePositionPair.state == NEGATED_FACTOR2)
+		        _program.negate_subtree(_tree);
+	        break;
+	    case unknown:
+            // this should not happen, return an error
+            break;
 	}
 
 	if (new_state >= 0) {
+	    printf("pos %i", pos);
+	    cout << "pos = " << pos << endl;
+	
 	    statePositionPair.position = pos;
 	    StatePositionPair newStatePositionPair;
 	    
 	    newStatePositionPair.state = new_state;
-	    stk.push_back(newStatePositionPair);
+	    statePositionPairList.push_back(newStatePositionPair);
 	} else
-	    stk.pop_back();
+	    printf("pop now");
+	    statePositionPairList.pop_back(); // removes the last element    ...... I THINK OR HOPE   ......
     }
 
     return pos;

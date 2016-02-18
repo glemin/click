@@ -387,7 +387,7 @@ IP6Filter::parse_program(Classification::Wordwise::CompressedProgram &zprog, con
 
 
 	  
-	        int pos = parser.parse_expr_iterative(1);               // TODO oke cool ? gaat deze methode het zprog programma echt opbouwen? Let's watch & see!
+	        int pos = parser.parse();               // TODO oke cool ? gaat deze methode het zprog programma echt opbouwen? Let's watch & see!
 	        if (pos < words.size())                                 // ik denk dat die normaal de positie gaat returnen waar er voor het eerst een typfout komt of zo in deze 'flow'-tekst, en anders dan geeft die een muug hoog getal terug ofzu wat dan wil zeggen dat het al het parsen goed is gelukt!
 		        cerrh.error("garbage after expression at %<%s%>", words[pos].c_str());
 	    }

@@ -46,7 +46,8 @@ public:
 
 
 //	void parse_slot(int output, int pos);   // momenteel ongebruikt maar de functionaliteit zit in parse_program
-	int parse_expr_iterative(int pos);
+	int parse();
+private:
 	int parse_primitive(int parsePosition, bool negatedSignSeenBeforePrimitive, Classification::Wordwise::Program& compileIntoThisProgram);  // functie die de functionaliteit bevat om tests te parsen, een test is: true, false, quals data of quals relop data
 };
 
