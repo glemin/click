@@ -23,20 +23,20 @@ public:
 
 	enum State {
 	    unknown,
-	    s_expr0, 
-	    s_expr1, 
-	    s_expr2,
-	    s_orexpr0, 
-	    s_orexpr1,
-	    s_term0, 
-	    s_term1, 
-	    s_term2,         
-        s_factor0, 
-        s_factor1, 
-        s_factor2,
-	    s_factor0_neg, 
-	    s_factor1_neg, 
-	    s_factor2_neg
+	    EXPR0, 
+	    EXPR1, 
+	    EXPR2,
+	    OR_EXPR0, 
+	    OR_EXPR1,
+	    TERM0, 
+	    TERM1, 
+	    TERM2,         
+        FACTOR0, 
+        FACTOR1, 
+        FACTOR2,
+	    NEGATED_FACTOR0, 
+	    NEGATED_FACTOR1, 
+	    NEGATED_FACTOR2
 	};
 
     struct StatePositionPair {                  /* StatePositionPair is a struct inside a struct */
