@@ -131,8 +131,8 @@ enum {  /* temporarily */
 
 class IP6Filter : public Element { public:
 
-    IP6Filter() CLICK_COLD;     // CLICK_COLD is an indication to the compiler that this function is rarely used.
-    ~IP6Filter() CLICK_COLD;    // CLICK_COLD is an indication to the compiler that this function is rarely used.
+    IP6Filter();
+    ~IP6Filter();
 
     const char *class_name() const		{ return "IP6Filter"; }
     const char *port_count() const		{ return "1/-"; }
@@ -188,6 +188,8 @@ protected:  // Because it is used by IPClassifier?
     IPFilterProgram _zprog; // dezen brol moet ge heel low level instructies meegeven! Daarmee wil die gevoed worden en op basis van die low level info kan hij het 'verkeer' regelen, en ieder pakket naar de juiste output loodsen.
 
 private:
+ //   tree<NodeItem> nodeItemTree;    // een parse tree
+
     // is looking something up in the global database of NameInfo, I suppose..........
     static int lookup(String word, int type, int transp_proto, uint32_t &data, const Element *context, ErrorHandler *errh); // dees zoekt iet op, wa is oek nog ni zu duidelijk
 

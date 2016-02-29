@@ -284,7 +284,7 @@ parse_brackets(Primitive& prim, const Vector<String>& words, int pos, ErrorHandl
     const char* comma = find(combination.begin(), combination.end(), ',');        // a comma is something like ','
     if (colon < combination.end() - 1) {
         if (cp_integer(combination.begin(), colon, 0, &fieldpos) == colon && cp_integer(colon + 1, combination.end(), 0, &len) == combination.end())
-         goto non_syntax_error;
+            goto non_syntax_error;
     } else if (comma < combination.end() - 1) {
         int pos2;
         if (cp_integer(combination.begin(), comma, 0, &fieldpos) == comma && cp_integer(comma + 1, combination.end(), 0, &pos2) == combination.end()) {
@@ -298,22 +298,24 @@ parse_brackets(Primitive& prim, const Vector<String>& words, int pos, ErrorHandl
 
     non_syntax_error:
         errh->error("non syntax error");
-/*int multiplier = 8;
-  fieldpos *= multiplier, len *= multiplier;
-  if (len < 1 || len > 32)
-    errh->error("LEN in %<[POS:LEN]%> out of range, should be between 1 and 4");
-  else if ((fieldpos & ~31) != ((fieldpos + len - 1) & ~31))
-      errh->error("field [%d:%d] does not fit in a single word", fieldpos/multiplier, len/multiplier);
-  else {
-    int transp = prim._transp_proto;
-    if (transp == IP6Filter::UNKNOWN)
-      transp = 0;
-    prim.set_type(IP6Filter::TYPE_FIELD
-		  | (transp << IP6Filter::FIELD_PROTO_SHIFT)
-		  | (fieldpos << IP6Filter::FIELD_OFFSET_SHIFT)
-		  | ((len - 1) << IP6Filter::FIELD_LENGTH_SHIFT), errh);    // TODO wth is dit?
-  }
- */
+        
+    // below was previously commented away but didn't work
+    int multiplier = 8;
+    fieldpos *= multiplier, len *= multiplier;
+    if (len < 1 || len > 32)
+        errh->error("LEN in %<[POS:LEN]%> out of range, should be between 1 and 4");
+    else if ((fieldpos & ~31) != ((fieldpos + len - 1) & ~31))
+        errh->error("field [%d:%d] does not fit in a single word", fieldpos/multiplier, len/multiplier);
+    else {
+        int transp = prim._transp_proto;
+        if (transp == IP6Filter::UNKNOWN)
+            transp = 0;
+            prim.set_type(IP6Filter::TYPE_FIELD
+	        | (transp << IP6Filter::FIELD_PROTO_SHIFT)
+	        | (fieldpos << IP6Filter::FIELD_OFFSET_SHIFT)
+	        | ((len - 1) << IP6Filter::FIELD_LENGTH_SHIFT), errh);    // TODO wth is dit?
+    }
+    // above was previously commented away but didn't work
         return pos;
 }
 

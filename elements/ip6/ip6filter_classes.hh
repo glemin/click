@@ -11,7 +11,23 @@
 #include "elements/standard/classification.hh"
 CLICK_DECLS
 
-class Primitive {
+class NodeItem {
+    
+};
+
+class AndItem: public NodeItem {
+
+};
+
+class OrItem: public NodeItem {
+
+};
+
+class TernaryItem: public NodeItem {
+
+};
+
+class Primitive: public NodeItem {
 public:
     String operator_;  
 };

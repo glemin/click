@@ -11,15 +11,11 @@ CLICK_DECLS
 
 class Parser { // ne parser zeker, mor wat diej doe is nog ni zu duidelijk
 public:
-    const Vector<String> &_words; //  iet van woorde, wa ne const vector just is, weet ek oek ni direct..., wil da zegge da eens da ge diej initiatlized da er geen elementn ni meer kunne toegeveogd worre of is da toch iet anders..
-    Vector<int> &_tree; // ne vagen boom der oek nog tusse, deze keer blijkbaar ni const
-    Classification::Wordwise::Program &_program;       // dit is diej low level brol van hierboven!! das hetzelfde als _zprog !!
-    const Element* _context;        // een element wordt hier een context genoemd => not sure why :d
-    ErrorHandler* _errh;
-    Primitive _prev_prim;           // Waarom hebben we die prev prim nodig?????? EEEn wat happens when it is the first, is this then 0???? or so oo mthing eeelsee ..
+//    const Vector<String> &tokens; //  iet van woorde, wa ne const vector just is, weet ek oek ni direct..., wil da zegge da eens da ge diej initiatlized da er geen elementn ni meer kunne toegeveogd worre of is da toch iet anders..
 
-    Parser(const Vector<String> &words, Vector<int> &tree, Classification::Wordwise::Program &program, const Element *context, ErrorHandler *errh) 
-    : _words(words), _tree(tree), _program(program), _context(context), _errh(errh) { } /* set all variables in the constructor */
+//    Parser(const Vector<String> &tokens) {
+//        this.tokens = tokens;
+//    }
 
 	enum State {
 	    unknown,

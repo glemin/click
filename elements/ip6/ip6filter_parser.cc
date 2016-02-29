@@ -311,6 +311,7 @@ int Parser::parse_primitive(int position, bool negatedSignSeenBeforePrimitive, P
 
 // zo'n pushdown automaat is in essentie een niet-deterministische eindige automaat met epsilon transities toegestaan en 1 bijkomstige eigenschap: een parseStack waarop het een string van "stack symbolen" kan opslaan.
 
+
 /* We parse the following grammar:
 
  * expr ::= orexpr                      // start subtree    & end with finish_subtree(tree, Classification::c_ternary)
@@ -322,7 +323,6 @@ int Parser::parse_primitive(int position, bool negatedSignSeenBeforePrimitive, P
  *	|   term and term
  *	|   term factor			// juxtaposition = and
  *	|   term
- *  |
  * factor ::= ! factor
  *	|   ( expr )
  *	|   primitive
@@ -331,6 +331,59 @@ int Parser::parse_primitive(int position, bool negatedSignSeenBeforePrimitive, P
  *	|   qualifiers data
  *	|   qualifiers relationoperator data
  */
+ 
+/* 
+class TokenList : public List<String> {
+public:
+    int getNextToken() {
+        int oldTokenNumber = currentTokenNumber;
+        if (currentTokenNumber < this.size()) {
+            currentTokenNumber++;
+        }
+        return oldTokenNumber;
+   }
+
+private:
+    int currentTokenNumber = 0;
+}
+ 
+class Production {
+    List<String>
+
+    bool firstListContains() {
+    
+    }
+
+}
+
+class ListedProduction() {
+
+
+}
+
+ 
+int Parser::parse() {
+    bool done = false;
+    while(!done) {
+        String token = tokenList.getNextToken();
+        if (S.firstListContains(
+    }
+
+    
+    
+    
+}
+ 
+*/ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
  
 int Parser::parse() {
     int pos = 1;
@@ -351,16 +404,17 @@ int Parser::parse() {
 	        cout << "EXPR0" << endl;
 	        _program.start_subtree(_tree);
 	        
-	        statePositionPair.state = EXPR1;
+	        statePositionPair.state = EXPR1;    // state to later visit if we pop back
 	    
 	        new_state = OR_EXPR0;
 	        break;
         case EXPR1:                                     /* EXPR1 -> EXPR2 -> EXPR1 -> EXPR2 -> EXPR1 -> EXPR2 -> EXPR1 -> ...  as many times as needed */
  //           cout << "EXPR1" << endl;
             if (pos >= _words.size() || _words[pos] != "?") // something went wrong
+                                                            // bij welke doen we dit?
 	            goto finish_expr;
             pos++;              /* because we readed a character */          
-            statePositionPair.state = EXPR2;      /* if the first part matches check the second part */
+            statePositionPair.state = EXPR2;
             
             new_state = EXPR0;
             break;
@@ -390,7 +444,7 @@ int Parser::parse() {
 	        break;
 	    case OR_EXPR1:
 	        cout << "OR_EXPR1" << endl;
-	        if (pos >= _words.size() || (_words[pos] != "or" && _words[pos] != "||"))
+	        if (pos >= _words.size() || (_words[pos] != "or" && _words[pos] != "||"))       // IF an OR was found then we go back to OR TERM0 :/
         		goto finish_orexpr;
 	        pos++;
 	        
@@ -419,7 +473,7 @@ int Parser::parse() {
 	        }
 	        if (pos < _words.size() && (_words[pos] == "and" || _words[pos] == "&&")) {
 		        statePositionPair.state = TERM1;
-		        pos++;
+		        pos++;  // consume "and" or "&&" and read next character
 	        } else
 		        statePositionPair.state = TERM2;
 		        
@@ -443,7 +497,7 @@ int Parser::parse() {
 	                
 	                new_state = FACTOR0;      /* we negate because we found a not sign => s_factor0_neg (already negated) becomes s_factor0 because it got negated 2 times */
 	            }
-		        pos++;
+		        pos++;  // read next character
 	        } else if (pos < _words.size() && _words[pos] == "(") {
 	            if (statePositionPair.state == FACTOR0) {
 	                statePositionPair.state = FACTOR2;
@@ -452,10 +506,10 @@ int Parser::parse() {
 	            }
 	            
 		        new_state = EXPR0;
-		        pos++;
+		        pos++;  // read next character
 	        } else
 	            cout << "1" << endl;
-		        pos = parse_primitive(pos, statePositionPair.state == NEGATED_FACTOR0, _program);
+		        pos = parse_primitive(pos, statePositionPair.state == NEGATED_FACTOR0, _program);   // pos is set to the next token to be read
 	        break;
 	    case FACTOR1:
 	    case NEGATED_FACTOR1:
@@ -484,9 +538,10 @@ int Parser::parse() {
 	    printf("pos %i", pos);
 	    cout << "pos = " << pos << endl;
 	
+
 	    statePositionPair.position = pos;
+
 	    StatePositionPair newStatePositionPair;
-	    
 	    newStatePositionPair.state = new_state;
 	    statePositionPairList.push_back(newStatePositionPair);
 	} else
