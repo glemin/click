@@ -386,39 +386,66 @@ int Parser::parse() {
  
  
 int Parser::parse() {
-    int pos = 1;
-
-    Vector<StatePositionPair> statePositionPairList;
+    Vector<StatePositionPair> statePositionPairList;	// list with states still to be visited
     
-    StatePositionPair statePositionPair;
-    statePositionPair.state = EXPR0;
+    StatePositionPair statePositionPair;		// a state in the list of still to be visited states
+    statePositionPair.state = EXPR0;			// our first state to be visited
+    statePositionPair.position = 1;			// => do we need to keep track of the position?
+    statePositionPairList.push_back(statePositionPair);	// add the state officially to the list of still to be visited states
     
-    statePositionPairList.push_back(statePositionPair);
-
-    while (statePositionPairList.size() > 0) {
-	    StatePositionPair &statePositionPair = statePositionPairList.back();    /* look at top of stack */
-	    State new_state = unknown;
-
-	    switch (statePositionPair.state) {              /* Head track EXPR0 -> OR_EXPR0 -> TERM0 -> FACTOR0 */
-        case EXPR0:
-	        cout << "EXPR0" << endl;
-	        _program.start_subtree(_tree);
-	        
-	        statePositionPair.state = EXPR1;    // state to later visit if we pop back
+    int currentTokenNumber;				// current token we are processing at the moment
+    currentTokenNumber = 1;				// we start with 1
+    
+    while (statePositionPairList.size() != 0) { 	// as long as it is not empty
+	    StatePositionPair &statePositionPair = statePositionPairList.back();	// look at the top state but don't pop it
 	    
-	        new_state = OR_EXPR0;
+	    State new_state = unknown;			// means a new state hasn't been found yet
+	    switch (statePositionPair.state) {              /* Head track EXPR0 -> OR_EXPR0 -> TERM0 -> FACTOR0 */
+        case EXPR_1:	// EXPR, first child
+	        this->program.start_subtree();		// it is a first child, hence a subtree is started
+	        
+	        statePositionPair.state = EXPR_1; 	// WARNING WE CAN ALTER THE TOP OF THE STACK ??? I ASSUME...
+	        					// top of the stack state gets modified, now it points to state EXPR1
+	        
+	        StatePositionPair newState;
+	        newState.state = OR_EXPR_0;
+	        statePosition.push_back(newState);
+	        break:
+	        
+	case OR_EXPR_1: 
+		this->program.start_subtee();
+		break;
+		
+	case AND_EXPR_1
+		this->program.start_subtree();
+		break;
+		
+	case FACTOR_1:
+		this->program.start_subtree();
+		break;
+	
+	case 	
+	
+		
+		
+		
+		
+	        
+	        
+	    
+	        // WHY NOT IMMEDIATLY ADD THE NEW STATE TO THE POP OF THE STACK RIGHT HERE???????
 	        break;
-        case EXPR1:                                     /* EXPR1 -> EXPR2 -> EXPR1 -> EXPR2 -> EXPR1 -> EXPR2 -> EXPR1 -> ...  as many times as needed */
+        case EXPR_2:                                 /* EXPR1 -> EXPR2 -> EXPR1 -> EXPR2 -> EXPR1 -> EXPR2 -> EXPR1 -> ...  as many times as needed */
  //           cout << "EXPR1" << endl;
             if (pos >= _words.size() || _words[pos] != "?") // something went wrong
                                                             // bij welke doen we dit?
 	            goto finish_expr;
             pos++;              /* because we readed a character */          
-            statePositionPair.state = EXPR2;
+            statePositionPair.state = EXPR_2;
             
-            new_state = EXPR0;
+            new_state = EXPR_0;
             break;
-	    case EXPR2:
+	    case EXPR_3:
 	        cout << "EXPR2" << endl;
 	        if (pos == statePositionPair.position || pos >= _words.size() || _words[pos] != ":") {
 		        _errh->error("missing %<:%> in ternary expression");        // Dit is een echte fout want na een ? moet een uitdrukking komen en daarna een : .
