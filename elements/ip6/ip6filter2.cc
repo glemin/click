@@ -32,6 +32,7 @@
 #include <click/etheraddress.hh>
 #include <click/nameinfo.hh>
 #include <stack>
+#include <iostream>
 CLICK_DECLS
 
 using std::stack;
@@ -196,9 +197,50 @@ IP6Filter::Primitive::add_comparison_exprs(Classification::Wordwise::Program &pr
     program.negate_subtree(tree, true);
 }
 */
-/* Helper function */
+
+
+Vector<String> separate_text(const String& text) {
+    Vector<String> tokenList;
+    const char* s = text.data();
+    
+    
+    int pos = 0;
+    
+    String currentToken = "";
+    while (pos < text.length()) {
+        if (!(s[pos] == ' ')) {             // TODO does isspace also count a tab as a space?
+            std::cout << "not a space on pos = " << pos << std::endl;
+            std::cout << "we are going to make currentToken longer and add " << (char) s[pos] << std::endl;
+            currentToken += s[pos];
+            std::cout << "currentToken after appends is " << currentToken << std::endl;
+        } else {
+            if (currentToken != "") {   // at least one non-space character was read
+                tokenList.push_back(currentToken);
+            }
+            currentToken = "";
+        }
+        pos++;
+   }
+   std::cout << "let's test something" << std::endl;
+   std::cout << "s[0] = " << s[0] << std::endl;
+   std::cout << "s[1] = " << s[1] << std::endl;
+   std::cout << "s[2] = " << s[2] << std::endl;
+   std::cout << "s[3] = " << s[3] << std::endl;
+   std::cout << "s[4] = " << s[4] << std::endl;   
+   std::cout << "s[5] = " << s[5] << std::endl;   
+   std::cout << "s[6] = " << s[6] << std::endl;
+   std::cout << "s[7] = " << s[7] << std::endl;
+   
+   for(int i = 0; i < tokenList.size(); i++) {
+       std::cout << "tokenList[" << i << "] = " << tokenList[i] << std::endl;
+   }
+   
+   return tokenList;
+}
+
 
 // TODO hoe werkt dit? in wat voor units wordt u tekst opgedeeld? => documentatie ontbreekt!
+/*
 static void
 separate_text(const String &text, Vector<String> &words)
 {
@@ -233,23 +275,27 @@ separate_text(const String &text, Vector<String> &words)
       break;
 
      default: {                                 // in the default case we face a piece of text and we need to push the whole text back
-	    int first = pos;
+	    int startPos = pos;
 	    while (pos < len && (isalnum((unsigned char) s[pos]) || s[pos] == '-' || s[pos] == '.' || s[pos] == '/' || s[pos] == '@' || s[pos] == '_' || s[pos] == ':')) // isalnum is a c function in the <cctype> library which checks if a character is alphanumeric.
 
 // int isalnum (int c) checks whether c is either a decimal digit or an uppercase or lowercase letter.
 // the result is true if either isalpha or isdigit would also return true.
 
 // so as long as we are still facing an alphanumeric character or one of the exceptional characters like -,.,/,@,_ and : we need to keep reading and we need to stop as soon as we see a special character OR if we are at the end of the to be parsed string.
+
+// TODO for the while, why only accept alphanumeric characters and silently remove the non alphanumeric characters? => Isn't that a bit strange?
 	        pos++;
-	        if (pos == first)
-	            pos++;
-	        words.push_back(text.substring(first, pos - first));
-	        break;
+	        
+	    if (pos == startPos)    // only skip a bad character if it was the first character of the string
+	       pos++;
+	    words.push_back(text.substring(startPos, pos - startPos));
+	    break;      // TODO why is here still a break???
         }
 
     }
   }
 }
+*/
 
 /* A grammar for the "Wireshark language consisting of Wireshark primitives and conjugates" given in an EBNF-like format.
  * -> term is more or less an andexpr you could say.
@@ -265,13 +311,16 @@ separate_text(const String &text, Vector<String> &words)
 
 
 // TODO I suppose they mean to parse square brackets, however no documentation was added to this part of the code.
+
+// PARSE SQUARE BRACKETS
+/*
 static int
-parse_brackets(Primitive& prim, const Vector<String>& words, int pos, ErrorHandler* errh)       // TODO why does this have a primitive as an argument?
+parse_brackets(Primitive& prim, const Vector<string>& words, int pos, ErrorHandler* errh)       // TODO why does this have a primitive as an argument?
 {
     int first_pos = pos + 1; // Don't look at first_pos. This is only used in case of an error.
     String combination;
     for (pos++; pos < words.size() && words[pos] != "]"; pos++)
-        combination += words[pos];
+        combination += words[pos];          // Append a new string to the combined String
     if (pos >= words.size()) {
         errh->error("missing %<]%>");       // We didn't encounter the closing bracket. This leads to an error.
         return first_pos;
@@ -280,12 +329,12 @@ parse_brackets(Primitive& prim, const Vector<String>& words, int pos, ErrorHandl
 
     // parse 'combination'
     int fieldpos, len = 1;
-    const char* colon = find(combination.begin(), combination.end(), ':');        // a colon is something like ':'
-    const char* comma = find(combination.begin(), combination.end(), ',');        // a comma is something like ','
-    if (colon < combination.end() - 1) {
+    const char* colon = find(combination.begin(), combination.end(), ':');      // where is the : in the statement between brackets
+    const char* comma = find(combination.begin(), combination.end(), ',');      // where is the , in the statement between brackets
+    if (colon < combination.end() - 1) {    // colon is not on the last position (which if it would be I assume would be an error), however can we convince ourselves that it shouldn't be <= ?
         if (cp_integer(combination.begin(), colon, 0, &fieldpos) == colon && cp_integer(colon + 1, combination.end(), 0, &len) == combination.end())
             goto non_syntax_error;
-    } else if (comma < combination.end() - 1) {
+    } else if (comma < combination.end() - 1) { // comma is not on the last position (which if it would be I assume would be an error), however can we convince outselves that it shouldn't be <= ?
         int pos2;
         if (cp_integer(combination.begin(), comma, 0, &fieldpos) == comma && cp_integer(comma + 1, combination.end(), 0, &pos2) == combination.end()) {
             len = pos2 - fieldpos + 1;
@@ -297,27 +346,27 @@ parse_brackets(Primitive& prim, const Vector<String>& words, int pos, ErrorHandl
     return pos;
 
     non_syntax_error:
-        errh->error("non syntax error");
-        
-    // below was previously commented away but didn't work
-    int multiplier = 8;
-    fieldpos *= multiplier, len *= multiplier;
-    if (len < 1 || len > 32)
-        errh->error("LEN in %<[POS:LEN]%> out of range, should be between 1 and 4");
-    else if ((fieldpos & ~31) != ((fieldpos + len - 1) & ~31))
-        errh->error("field [%d:%d] does not fit in a single word", fieldpos/multiplier, len/multiplier);
-    else {
-        int transp = prim._transp_proto;
-        if (transp == IP6Filter::UNKNOWN)
-            transp = 0;
-            prim.set_type(IP6Filter::TYPE_FIELD
-	        | (transp << IP6Filter::FIELD_PROTO_SHIFT)
-	        | (fieldpos << IP6Filter::FIELD_OFFSET_SHIFT)
-	        | ((len - 1) << IP6Filter::FIELD_LENGTH_SHIFT), errh);    // TODO wth is dit?
-    }
-    // above was previously commented away but didn't work
+        // below was previously commented away but didn't work
+        int multiplier = 8;
+        fieldpos *= multiplier, len *= multiplier;
+        if (len < 1 || len > 32)
+            errh->error("LEN in %<[POS:LEN]%> out of range, should be between 1 and 4");    // Is this still the case? How long is this field in IPv6?
+        else if ((fieldpos & ~31) != ((fieldpos + len - 1) & ~31))
+            errh->error("field [%d:%d] does not fit in a single word", fieldpos/multiplier, len/multiplier);
+        else {
+        // ==> wat hier net onder staat laten we er voorlopig even uit
+//            int transp = prim._transp_proto;
+//            if (transp == IP6Filter::UNKNOWN)
+//                transp = 0;
+//                prim.set_type(IP6Filter::TYPE_FIELD
+//	            | (transp << IP6Filter::FIELD_PROTO_SHIFT)
+//	            | (fieldpos << IP6Filter::FIELD_OFFSET_SHIFT)
+//	            | ((len - 1) << IP6Filter::FIELD_LENGTH_SHIFT), errh);    // TODO wth is dit?
+        }
+        // above was previously commented away but didn't work
         return pos;
 }
+*/
 
 /* parsing and compilation */
 
@@ -344,8 +393,7 @@ IP6Filter::parse_program(Classification::Wordwise::CompressedProgram &zprog, con
                                                                     // Nu op IPClassifier zijn die typisch wel anders en hebben we iets als
                                                                     // IPClassifier(ip vers 4, dst port 50) waarbij de twee flows dus de 'ip vers 4'-flow en de 
                                                                     // 'dst port 50'-flow zijn.
-	    Vector<String> words;
-	    separate_text(cp_unquote(conf[argno]), words);
+	    Vector<String> words = separate_text(cp_unquote(conf[argno]));
 
 	    if (words.size() == 0) {
 	        errh->error("empty pattern %d", argno);

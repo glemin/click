@@ -36,7 +36,7 @@ class IPHostPrimitive: public Primitive {
 public:
     // data
     IP6Address ip6Address;
-    String source_or_destination = "not set"; /* will be assigned "src", "dst", "src or dst" or "src and dst" */   
+    String source_or_destination; // will be assigned "src", "dst", "src or dst" or "src and dst"
 
     void compile(Classification::Wordwise::Program& program, Vector<int> tree);
     void print();
@@ -46,7 +46,7 @@ class IPNetPrimitive: public Primitive {
 public:
     // data
     IP6Address ip6NetAddress;
-    String source_or_destination = "not set"; /* will be assigned "src", "dst", "src or dst" or "src and dst" */   
+    String source_or_destination; // will be assigned "src", "dst", "src or dst" or "src and dst"
 
     void compile(Classification::Wordwise::Program& program, Vector<int> tree);
     void print();
@@ -119,7 +119,7 @@ public:
 class EtherHostPrimitive: public Primitive {
 public:
     EtherAddress etherAddress;
-    String  source_or_destination = "not set"; /* will be assigned "src", "dst", "src or dst" or "src and dst" */   
+    String source_or_destination; //  will be assigned "src", "dst", "src or dst" or "src and dst"
 
     void compile(Classification::Wordwise::Program& program, Vector<int> tree);
     void print();

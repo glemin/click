@@ -17,6 +17,8 @@ public:
 //        this.tokens = tokens;
 //    }
 
+    Parser(const Vector<String> &words, Vector<int> &tree, Classification::Wordwise::Program &prog, const Element *context, ErrorHandler *errh) : _words(words), _tree(tree), _program(prog), _context(context), _errh(errh) { }
+
 	enum State {
 	    unknown,
 	    EXPR0, 
@@ -32,7 +34,11 @@ public:
         FACTOR2,
 	    NEGATED_FACTOR0, 
 	    NEGATED_FACTOR1, 
-	    NEGATED_FACTOR2
+	    NEGATED_FACTOR2,
+	    
+	    // too special shortcut variables
+	    FIRST = EXPR0,
+	    LAST = NEGATED_FACTOR2
 	};
 
     struct StatePositionPair {                  /* StatePositionPair is a struct inside a struct */
@@ -44,6 +50,13 @@ public:
 //	void parse_slot(int output, int pos);   // momenteel ongebruikt maar de functionaliteit zit in parse_program
 	int parse();
 private:
+	const Vector<String> &_words;
+	Vector<int> &_tree;
+	Classification::Wordwise::Program &_program;
+	const Element *_context;
+	ErrorHandler *_errh;
+	Primitive _prev_prim;
+
 	int parse_primitive(int parsePosition, bool negatedSignSeenBeforePrimitive, Classification::Wordwise::Program& compileIntoThisProgram);  // functie die de functionaliteit bevat om tests te parsen, een test is: true, false, quals data of quals relop data
 };
 

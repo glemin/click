@@ -50,7 +50,7 @@ int Parser::parse_primitive(int position, bool negatedSignSeenBeforePrimitive, P
             || _words[position+2] == "!=") {    /* determine whether an optional ==, >, >=, <=, <, != keyword was used */
                 IPVersionPrimitive primitive;
                 primitive.operator_ = _words[position+2];
-                primitive.versionNumber = atoll(_words[position+3].c_str());    /* no error handling we might want to use boost::lexical_cast */
+                primitive.versionNumber = atoll(_words[position+3].c_str());    // check whether parseInteger is an option
                 primitive.compile(compileIntoThisProgram, _tree);
                
                 return position + 4;
@@ -397,6 +397,8 @@ int Parser::parse() {
 
     while (statePositionPairList.size() > 0) {
 	    StatePositionPair &statePositionPair = statePositionPairList.back();    /* look at top of stack */
+	    cout << "statePositionPair.state = " << statePositionPair.state << endl;
+	    cout << "EXPR0 = " << EXPR0 << endl;
 	    State new_state = unknown;
 
 	    switch (statePositionPair.state) {              /* Head track EXPR0 -> OR_EXPR0 -> TERM0 -> FACTOR0 */
@@ -534,15 +536,16 @@ int Parser::parse() {
             break;
 	}
 
-	if (new_state >= 0) {
-	    printf("pos %i", pos);
-	    cout << "pos = " << pos << endl;
+	if (new_state >= FIRST && new_state <= LAST) {
+	//    printf("pos %i", pos);
+	//    cout << "pos = " << pos << endl;
 	
 
 	    statePositionPair.position = pos;
-
+	    
 	    StatePositionPair newStatePositionPair;
 	    newStatePositionPair.state = new_state;
+	    
 	    statePositionPairList.push_back(newStatePositionPair);
 	} else
 	    printf("pop now");
