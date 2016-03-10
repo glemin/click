@@ -1,0 +1,4 @@
+// Test StoreIPAddress #1
+
+InfiniteSource(LIMIT 5) -> UDPIP6Encap(2001:2001:2001:2001::1, 1234, 2001:2001:2001:2001::2, 1234) -> MarkIPHeader -> EtherEncap(0x0800, 00:0a:95:9d:68:16, 00:0a:95:9d:68:17) -> 
+SetIP6Address(2001:2001:2001:2001::50) -> StoreIP6Address(OFFSET 38) -> ToDump(script5.dump) -> Discard;

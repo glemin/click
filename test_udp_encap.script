@@ -1,0 +1,3 @@
+// Test UDPEncap router alert option
+
+InfiniteSource(LIMIT 5) -> ToDump(bla.dump) -> UDPEncap(1234, 1235) -> HopByHopEncap(17,1) -> ToDump(udpencap.dump) -> Discard;

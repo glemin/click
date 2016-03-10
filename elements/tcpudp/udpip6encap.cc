@@ -106,10 +106,10 @@ UDPIP6Encap::simple_action(Packet *p_in)
     ip6->ip6_hlim = 0xff;
     ip6->ip6_src = _saddr;
     if (_use_dst_anno)
-	ip6->ip6_dst = DST_IP6_ANNO(p);
+	ip6->ip6_dst = p->dst_ip6_anno();
     else {
 	ip6->ip6_dst = _daddr;
-	SET_DST_IP6_ANNO(p,_daddr);
+        p->set_dst_ip6_anno(IP6Address(_daddr));
     }
     p->set_ip6_header(ip6, sizeof(click_ip6));
 

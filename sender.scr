@@ -1,0 +1,8 @@
+InfiniteSource(LIMIT 100000)
+-> UDPIPEncap(SRC 192.168.1.16, DST 192.168.1.17, SPORT 50000, DPORT 50001)
+-> EtherEncap(0x0800, e0:b9:a5:0b:bc:68, 00:11:2f:59:9a:3c)
+-> ToDevice(eth0);
+
+// -> UDPEncap(50000,50001)
+// -> IPEncap(PROTO 17, SRC 192.168.1.16, DST 192.168.1.17)
+

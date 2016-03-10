@@ -1,0 +1,4 @@
+InfiniteSource(LIMIT 5, LENGTH 1200) -> filter::IP6Filter(0 src host 3ffe:1900:4545:3:200:f8ff:fe21:67cf, 1 dst host 2001:0db8:0000:0042:0000:8a2e:0370:7334)
+
+filter[0] -> Print("a") -> Discard;
+filter[1] -> Print("b") -> Discard;

@@ -2,6 +2,8 @@
 #ifndef CLICK_PACKET_HH
 #define CLICK_PACKET_HH
 #include <click/ipaddress.hh>
+#include <click/ip6address.hh>
+#include <clicknet/ip6_extension.h>
 #include <click/glue.hh>
 #include <click/timestamp.hh>
 #if CLICK_LINUXMODULE
@@ -42,15 +44,14 @@ class Packet { public:
 #ifdef CLICK_MINIOS
 	default_headroom = 48,		///< Increase headroom for improved performance.
 #else
-	default_headroom = 28,		///< Default packet headroom() for
+	default_headroom = 100,		///< Default packet headroom() for
 					///  Packet::make().  4-byte aligned.
 #endif
 	min_buffer_length = 64		///< Minimum buffer_length() for
 					///  Packet::make()
     };
 
-    static WritablePacket *make(uint32_t headroom, const void *data,
-				uint32_t length, uint32_t tailroom) CLICK_WARN_UNUSED_RESULT;
+    static WritablePacket *make(uint32_t headroom, const void *data, uint32_t length, uint32_t tailroom) CLICK_WARN_UNUSED_RESULT;
     static inline WritablePacket *make(const void *data, uint32_t length) CLICK_WARN_UNUSED_RESULT;
     static inline WritablePacket *make(uint32_t length) CLICK_WARN_UNUSED_RESULT;
 #if CLICK_LINUXMODULE
@@ -84,6 +85,8 @@ class Packet { public:
     inline const unsigned char *buffer() const;
     inline const unsigned char *end_buffer() const;
     inline uint32_t buffer_length() const;
+
+
 
 #if CLICK_LINUXMODULE
     struct sk_buff *skb()		{ return (struct sk_buff *)this; }
@@ -299,6 +302,21 @@ class Packet { public:
     inline uint32_t ip_header_length() const;
     inline void set_ip_header(const click_ip *iph, uint32_t len);
 
+    inline void set_network_annotation_header(const unsigned char *networkHeader); // this function sets the network annotation header to the given pointer
+
+    inline void setHopByHopAnnotationHeader(unsigned char* hopByHopHeader); // this header sets the hop by hop annotation header to the given pointer
+    inline unsigned char* getHopByHopAnnotationHeader(); // this function returns the hop by hop annotation header
+    inline void setDestinationOptions1AnnotationHeader(unsigned char* destinationOptionsHeader); // this header sets the first destination options annotation header to the given pointer
+    inline unsigned char* getDestinationOptions1AnnotationHeader(); // this function returns the first destination options annotation header
+    inline void setRoutingAnnotationHeader(unsigned char* routingHeader);
+    inline unsigned char* getRoutingAnnotationHeader();
+    inline void setFragmentationAnnotationHeader(unsigned char*);
+    inline unsigned char* getFragmentationAnnotationHeader();
+    inline void setDestinationOptions2AnnotationHeader(unsigned char*);
+    inline unsigned char* getDestinationOptions2AnnotationHeader();
+    inline void setMobilityAnnotationHeader(unsigned char*);
+    inline unsigned char* getMobilityAnnotationHeader();
+
     inline const click_ip6 *ip6_header() const;
     inline int ip6_header_offset() const;
     inline uint32_t ip6_header_length() const;
@@ -423,6 +441,16 @@ class Packet { public:
      *
      * The value is stored in the address annotation area. */
     inline void set_dst_ip_anno(IPAddress addr);
+
+    /** @brief Return the destination IPv6 address annotation.
+     *
+     * The value is taken from the address annotation area. */
+    inline IP6Address dst_ip6_anno() const;
+
+    /** @brief Set the destination IPv6 address annotation.
+     *
+     * The value is stored in the address annotation area. */
+    inline void set_dst_ip6_anno(IP6Address addr);
 
     /** @brief Return a pointer to the annotation area.
      *
@@ -704,9 +732,15 @@ class Packet { public:
     // clear_annotations(true) can memset() the structure to zero.
     struct AllAnno {
 	Anno cb;
-	unsigned char *mac;
-	unsigned char *nh;
-	unsigned char *h;
+	unsigned char *mac; // mac annotation header
+	unsigned char *nh; // network-layer annotation header (often IP/IPv6)
+	unsigned char *h; // transport-layer annotation header (often UDP/TCP/ICMP/ICMPv6)
+    unsigned char *hopByHop; // hop-by-hop annotation header (IPv6)
+    unsigned char *destinationOptions1; // first destination options annotation header (IPv6)
+    unsigned char *routing; // routing annotation header (IPv6)
+    unsigned char *fragmentation; // fragmentation annotation header (IPv6)
+    unsigned char *destinationOptions2; // second destination options annotation header (IPv6)
+    unsigned char *mobility; // mobility annotation header (used for MobileIPv6)
 	PacketType pkt_type;
 	Timestamp timestamp;
 	Packet *next;
@@ -938,7 +972,7 @@ Packet::end_buffer() const
 #endif
 }
 
-/** @brief Return the packet's length. */
+/** @brief Return the packet's length in bytes. */
 inline uint32_t
 Packet::length() const
 {
@@ -1741,6 +1775,18 @@ Packet::set_dst_ip_anno(IPAddress a)
     xanno()->u32[dst_ip_anno_offset / 4] = a.addr();
 }
 
+inline IP6Address
+Packet::dst_ip6_anno() const
+{
+    return IP6Address(anno_u8());
+}
+
+inline void
+Packet::set_dst_ip6_anno(IP6Address a)
+{
+    memcpy(anno_u8(), a.data(), 16); // The size of an IPv6 packet is 16 bytes.
+}
+
 /** @brief Set the MAC header pointer.
  * @param p new header pointer */
 inline void
@@ -1834,34 +1880,32 @@ Packet::push_mac_header(uint32_t len)
     return q;
 }
 
-/** @brief Set the network and transport header pointers.
- * @param p new network header pointer
- * @param len new network header length
- * @post network_header() == @a p and transport_header() == @a p + @a len */
+/** @brief Sets the network annotation header and also (!) the transport layer header
+ * @param p the network annotation header will be set to the pointer
+ * @param len this is the length of the new network annotation header. We need this to calculate the place where the transport layer header will start, and we use this information to set the transport layer header accordingly then.
+ */
 inline void
 Packet::set_network_header(const unsigned char *p, uint32_t len)
 {
     assert(p >= buffer() && p + len <= end_buffer());
-#if CLICK_LINUXMODULE	/* Linux kernel module */
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 24)
-    skb_set_network_header(skb(), p - data());
-    skb_set_transport_header(skb(), (p + len) - data());
-# else
-    skb()->nh.raw = const_cast<unsigned char *>(p);
-    skb()->h.raw = const_cast<unsigned char *>(p) + len;
-# endif
-#else				/* User-space and BSD kernel module */
-    _aa.nh = const_cast<unsigned char *>(p);
-    _aa.h = const_cast<unsigned char *>(p) + len;
-#endif
+    #if CLICK_LINUXMODULE   /* Linux kernel module */
+    # if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 24)
+        skb_set_network_header(skb(), p - data());
+        skb_set_transport_header(skb(), (p + len) - data());
+    # else
+        skb()->nh.raw = const_cast<unsigned char *>(p);
+        skb()->h.raw = const_cast<unsigned char *>(p) + len;
+    # endif
+    #else                           /* User-space and BSD kernel module */
+        _aa.nh = const_cast<unsigned char *>(p);
+        _aa.h = const_cast<unsigned char *>(p) + len;
+    #endif
 }
 
-/** @brief Set the network header length.
- * @param len new network header length
- *
- * Setting the network header length really just sets the transport header
- * pointer.
- * @post transport_header() == network_header() + @a len */
+/** @brief Set the network annotation header header and also (!) the transport layer header.
+ * @param p the network annotation header will be set to the pointer
+ * @param len this is the length of the new network annotation header. We need this to calculate the place where the transport layer header will start, and we use this information to set the transport layer header accordingly then.
+*/
 inline void
 Packet::set_network_header_length(uint32_t len)
 {
@@ -1889,7 +1933,7 @@ Packet::set_ip_header(const click_ip *iph, uint32_t len)
     set_network_header(reinterpret_cast<const unsigned char *>(iph), len);
 }
 
-/** @brief Set the network header pointer to an IPv6 header.
+/** @brief Set the network header pointer to an IPv6 header, and also set the transport layer header and use length to determine where that header starts.
  * @param ip6h new IP header pointer
  * @param len new IP header length in bytes
  * @post (char *) network_header() == (char *) @a ip6h
@@ -1901,7 +1945,7 @@ Packet::set_ip6_header(const click_ip6 *ip6h, uint32_t len)
     set_network_header(reinterpret_cast<const unsigned char *>(ip6h), len);
 }
 
-/** @brief Set the network header pointer to an IPv6 header.
+/** @brief Set the network header pointer to an IPv6 header, and also set te transport layer header and to set it assume that the IPv6 header had a fixed length of 40 with no extension headers following, so that the transport layer header can easily start after 40 bytes.
  * @param ip6h new IP header pointer
  * @post (char *) network_header() == (char *) @a ip6h
  * @post network_header_length() == 40
@@ -1910,6 +1954,87 @@ inline void
 Packet::set_ip6_header(const click_ip6 *ip6h)
 {
     set_ip6_header(ip6h, 40);
+}
+
+/** @brief Set the network annotation header 
+ * @param network_header new network annotation header */
+inline void
+Packet::set_network_annotation_header(const unsigned char *networkHeader)
+{
+    assert(networkHeader >= network_header());
+    _aa.nh = const_cast<unsigned char *>(networkHeader);
+}
+
+/** @brief Set the hop-by-hop annotation header (IPv6) */
+inline void
+Packet::setHopByHopAnnotationHeader(unsigned char* hopByHopHeader) {
+    _aa.hopByHop = hopByHopHeader;
+}
+
+/** @brief Get the hop-by-hop annotation header (IPv6) */
+inline unsigned char*
+Packet::getHopByHopAnnotationHeader() {
+    return _aa.hopByHop;
+}
+
+/** @brief There are two kinds of destination headers (IPv6). The one appearing before the routing and the on appearing afte the routing header. This function sets the destination header that occurs before the routing header */
+inline void
+Packet::setDestinationOptions1AnnotationHeader(unsigned char* destinationOptions1Header) {
+    _aa.destinationOptions1 = destinationOptions1Header;
+}
+
+/** @brief There are two kinds of destination headers (IPv6). The one appearing before the routing and the on appearing afte the routing header. This function gets the destination header that occurs before the routing header */
+inline unsigned char*
+Packet::getDestinationOptions1AnnotationHeader() {
+    return _aa.destinationOptions1;
+}
+
+/** @brief Set the routing annotation header (IPv6) */
+inline void
+Packet::setRoutingAnnotationHeader(unsigned char* routingHeader) {
+    _aa.routing = routingHeader;
+}
+
+/** @brief Get the routing annotation header (IPv6) */
+inline unsigned char*
+Packet::getRoutingAnnotationHeader() {
+    return _aa.routing;
+}
+
+/** @brief Set the fragmentation annotation header (IPv6) */
+inline void
+Packet::setFragmentationAnnotationHeader(unsigned char* fragmentationHeader) {
+    _aa.fragmentation = fragmentationHeader;
+}
+
+/** @brief Get the fragmentation annotation header (IPv6) */
+inline unsigned char*
+Packet::getFragmentationAnnotationHeader() {
+    return _aa.fragmentation;
+}
+
+/** @brief There are two kinds of destination headers (IPv6). The one appearing before the routing and the on appearing afte the routing header. This function sets the destination header that occurs after the routing header */
+inline void
+Packet::setDestinationOptions2AnnotationHeader(unsigned char* destinationOptions2Header) {
+    _aa.destinationOptions1 = destinationOptions2Header;
+}
+
+/** @brief There are two kinds of destination headers (IPv6). The one appearing before the routing and the on appearing afte the routing header. This function gets the destination header that occurs after the routing header */
+inline unsigned char*
+Packet::getDestinationOptions2AnnotationHeader() {
+    return _aa.destinationOptions2;
+}
+
+/** @brief Set the mobility (IPv6) annotation header */
+inline void
+Packet::setMobilityAnnotationHeader(unsigned char* mobilityHeader) {
+    _aa.mobility = mobilityHeader;
+}
+
+/** @brief Get the mobility (IPv6) annotation header */
+unsigned char*
+Packet::getMobilityAnnotationHeader() {
+    return _aa.mobility;
 }
 
 /** @brief Unset the network header pointer.

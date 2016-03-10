@@ -187,7 +187,7 @@ IPFilter::Primitive::clear()
 void
 IPFilter::Primitive::set_type(int x, ErrorHandler *errh)
 {
-  if (_type)
+  if (_type) // TODO Glenn Minne: why is this rule here?
     errh->error("type specified twice");
   _type = x;
 }
@@ -195,7 +195,7 @@ IPFilter::Primitive::set_type(int x, ErrorHandler *errh)
 void
 IPFilter::Primitive::set_srcdst(int x, ErrorHandler *errh)
 {
-  if (_srcdst)
+  if (_srcdst) // TODO Glenn Minne: why is this rule here?
     errh->error("%<src%> or %<dst%> specified twice");
   _srcdst = x;
 }
@@ -203,7 +203,7 @@ IPFilter::Primitive::set_srcdst(int x, ErrorHandler *errh)
 void
 IPFilter::Primitive::set_transp_proto(int x, ErrorHandler *errh)
 {
-  if (_transp_proto != UNKNOWN && _transp_proto != x)
+  if (_transp_proto != UNKNOWN && _transp_proto != x) // TODO Glenn Minne: what is this rule here? _transp_proto != x ??? why is that? you want to set it on x, right? so when it's not yet on what you want to set it, it's wrong?? seems sort of odd.
     errh->error("transport protocol specified twice");
   _transp_proto = x;
 }

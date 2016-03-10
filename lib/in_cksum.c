@@ -17,6 +17,7 @@
 #endif
 
 #if !CLICK_LINUXMODULE
+
 uint16_t
 click_in_cksum(const unsigned char *addr, int len)
 {

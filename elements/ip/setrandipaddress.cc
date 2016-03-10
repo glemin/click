@@ -1,5 +1,5 @@
 /*
- * setipaddress.{cc,hh} -- element sets destination address annotation
+ * setrandipaddress.{cc,hh} -- element sets destination address annotation
  * to a random IP address
  * Eddie Kohler, Robert Morris
  *

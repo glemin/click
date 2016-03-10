@@ -126,6 +126,11 @@
 # define PERFCTR_ANNO(p)		((p)->anno_u64(PERFCTR_ANNO_OFFSET))
 # define SET_PERFCTR_ANNO(p, v)		((p)->set_anno_u64(PERFCTR_ANNO_OFFSET, (v)))
 
+// bytes 48 - Pointer to UDP Checksum Field
+# define UDP_CHECKSUM_ANNO_OFFSET   48
+# define UDP_CHECKSUM_ANNO(p)            ((p)->anno_u8(UDP_CHECKSUM_ANNO_OFFSET))
+# define SET_UDP_CHECKSUM_ANNO(p, v)     ((p)->set_anno_u8(UDP_CHECKSUM_ANNO_OFFSET, (v)))
+
 # if SIZEOF_VOID_P == 8
 #  define IPSEC_SA_DATA_REFERENCE_ANNO_OFFSET	40
 #  define IPSEC_SA_DATA_REFERENCE_ANNO_SIZE	8

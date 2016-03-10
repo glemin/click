@@ -1,0 +1,5 @@
+// Testing StoreIPAddress
+
+InfiniteSource(LIMIT 5) -> ToDump(bla1.dump) -> UDPIP6Encap(2000:10:1::2, 1234, 2000:20:1::3, 1234) -> ToDump(bla2.dump) -> Discard;
+
+// -> MarkIP6Header -> EtherEncap(0x0800, 00:0a:95:9d:68:16, 00:0a:95:9d:68:17) -> SetIP6Address(2000:20:1::729) -> StoreIP6Address(2000:20:1::729, 38) -> ToDump(bla.dump) -> Discard;

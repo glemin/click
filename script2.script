@@ -1,0 +1,3 @@
+// For MarkIP6Header: sizeof Ethernet header = 24 bytes, right after that comes our IPv6 header, so we need to fill in 24 bytes here as our offset.
+
+InfiniteSource(LIMIT 4) -> UDPIP6Encap(2000:10:1::2, 1234, 2000:20:1::3, 1234) -> MarkIP6Header -> EtherEncap(0x86DD, 00:0a:95:9d:68:16, 00:0a:95:9d:68:17) -> SetIP6Address(2000:20:1::53) -> IP6Print -> IP6Mirror -> IP6Print -> ToDump(bla.dump) -> Discard;

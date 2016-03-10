@@ -34,23 +34,23 @@ IP6Address::IP6Address(const String &str)
     static_assert(sizeof(struct in6_addr) == 16, "in6_addr has the wrong size.");
     static_assert(sizeof(struct click_ip6) == 40, "click_ip6 has the wrong size.");
     if (!IP6AddressArg::parse(str, *this))
-	memset(&_addr, 0, sizeof(_addr));
+        memset(&_addr, 0, sizeof(_addr));
 }
 
 IP6Address
-IP6Address::make_prefix(int prefix_len)
+IP6Address::make_prefix(int prefix_len) // why not use unisgned char then?? anyway ... :)
 {
     assert(prefix_len >= 0 && prefix_len <= 128);
     IP6Address a = IP6Address::uninitialized_t();
     int i;
     for (i = 0; i < 4 && prefix_len >= 32; ++i, prefix_len -= 32)
-	a.data32()[i] = 0xFFFFFFFFU;
+	    a.data32()[i] = 0xFFFFFFFFU;
     if (i < 4 && prefix_len > 0) {
-	a.data32()[i] = htonl(0xFFFFFFFFU << (32 - prefix_len));
-	++i;
+	    a.data32()[i] = htonl(0xFFFFFFFFU << (32 - prefix_len));
+	    ++i;
     }
     for (; i < 4; ++i)
-	a.data32()[i] = 0;
+	    a.data32()[i] = 0;
     return a;
 }
 
@@ -94,26 +94,28 @@ IP6Address::mask_to_prefix_len() const
 bool
 IP6Address::ether_address(EtherAddress &mac) const
 {
-    if (has_ether_address()) {
-	unsigned char *d = mac.data();
-	d[0] = _addr.s6_addr[8];
-	d[1] = _addr.s6_addr[9];
-	d[2] = _addr.s6_addr[10];
-	d[3] = _addr.s6_addr[13];
-	d[4] = _addr.s6_addr[14];
-	d[5] = _addr.s6_addr[15];
-	return true;
+    if (has_ether_address()) 
+    {
+	    unsigned char *d = mac.data();
+	    d[0] = _addr.s6_addr[8];
+	    d[1] = _addr.s6_addr[9];
+	    d[2] = _addr.s6_addr[10];
+	    d[3] = _addr.s6_addr[13];
+	    d[4] = _addr.s6_addr[14];
+	    d[5] = _addr.s6_addr[15];
+	    return true;
     } else
-	return false;
+	    return false;
 }
 
 IPAddress
 IP6Address::ip4_address() const
 {
-    if (is_ip4_mapped()) {
-	return IPAddress(data32()[3]);
+    if (is_ip4_mapped()) 
+    {
+	    return IPAddress(data32()[3]);
     } else
-	return IPAddress();
+	    return IPAddress();
 }
 
 void
@@ -125,36 +127,40 @@ IP6Address::unparse(StringAccum &sa) const
     const uint8_t *a8 = data();
 
     // :: and IPv4 mapped addresses
-    if (a32[0] == 0 && a32[1] == 0) {
-	if (a32[2] == 0 && a32[3] == 0) {
-	    sa.append("::", 2);
-	    return;
-	} else if (a32[2] == 0) {
-	    sa.snprintf(23, "::%d.%d.%d.%d", a8[12], a8[13], a8[14], a8[15]);
-	    return;
-	} else if (a32[2] == htonl(0x0000FFFFU)) {
-	    sa.snprintf(23, "::ffff:%d.%d.%d.%d", a8[12], a8[13], a8[14], a8[15]);
-	    return;
-	}
+    if (a32[0] == 0 && a32[1] == 0) 
+    {
+	    if (a32[2] == 0 && a32[3] == 0) 
+        {
+	        sa.append("::", 2);
+	        return;
+	    } else if (a32[2] == 0) {
+	        sa.snprintf(23, "::%d.%d.%d.%d", a8[12], a8[13], a8[14], a8[15]);
+	        return;
+	    } else if (a32[2] == htonl(0x0000FFFFU)) {
+	        sa.snprintf(23, "::ffff:%d.%d.%d.%d", a8[12], a8[13], a8[14], a8[15]);
+	        return;
+	    }
     }
 
     // find the longest sequences of zero fields; if two sequences have equal
     // length, choose the first
     int zp = 0, zl = 0, lzp = 0;
     for (int p = 0; p < 8; ++p)
-	if (a16[p] != 0)
-	    lzp = p + 1;
-	else if (p + 1 - lzp > zl) {
-	    zp = lzp;
-	    zl = p + 1 - lzp;
-	}
+	    if (a16[p] != 0)
+	        lzp = p + 1;
+	    else if (p + 1 - lzp > zl) 
+        {
+	        zp = lzp;
+	        zl = p + 1 - lzp;
+	    }
 
     for (int p = 0; p < 8; ++p)
-	if (p == zp && zl > 1) {
-	    p += zl - 1;
-	    sa.append("::", p == 7 ? 2 : 1);
-	} else
-	    sa.snprintf(5, p ? ":%x" : "%x", ntohs(a16[p]));
+	    if (p == zp && zl > 1) 
+        {
+	        p += zl - 1;
+	        sa.append("::", p == 7 ? 2 : 1);
+	    } else
+	        sa.snprintf(5, p ? ":%x" : "%x", ntohs(a16[p]));
 }
 
 String
@@ -162,11 +168,12 @@ IP6Address::unparse() const
 {
     const uint32_t *a32 = data32();
     if (a32[0] == 0 && a32[1] == 0 && a32[2] == 0 && a32[3] == 0)
-	return String::make_stable("::", 2);
-    else {
-	StringAccum sa;
-	unparse(sa);
-	return sa.take_string();
+	    return String::make_stable("::", 2);
+    else 
+    {
+	    StringAccum sa;
+	    unparse(sa);
+	    return sa.take_string();
     }
 }
 
@@ -175,9 +182,8 @@ IP6Address::unparse_expanded() const
 {
     const uint16_t *a16 = data16();
     char buf[48];
-    sprintf(buf, "%x:%x:%x:%x:%x:%x:%x:%x",
-	    ntohs(a16[0]), ntohs(a16[1]), ntohs(a16[2]), ntohs(a16[3]),
-	    ntohs(a16[4]), ntohs(a16[5]), ntohs(a16[6]), ntohs(a16[7]));
+    sprintf(buf, "%x:%x:%x:%x:%x:%x:%x:%x",ntohs(a16[0]), ntohs(a16[1]), ntohs(a16[2]), ntohs(a16[3]),
+                                           ntohs(a16[4]), ntohs(a16[5]), ntohs(a16[6]), ntohs(a16[7]));
     return String(buf);
 }
 
@@ -201,94 +207,105 @@ IP6Address::unparse_expanded() const
 
 
 uint16_t
-in6_fast_cksum(const struct in6_addr *saddr,
-               const struct in6_addr *daddr,
-               uint16_t len,
-               uint8_t proto,
-               uint16_t ori_csum,
-               const unsigned char *addr,
-               uint16_t len2)
+in6_fast_cksum(const struct in6_addr *saddr,    // IPv6 source address of the IPv6 fixed header
+               const struct in6_addr *daddr,    // IPv6 destination address of the IPv6 fixed header
+               uint16_t len,                    // Length of the IPv6 length field
+               uint8_t proto,                   // Next protocol located in the IPv6 Next Header field 
+               uint16_t ori_csum,               // original checksum of the higher layer header (that is non-adjusted to the Pseudo Header)
+               const unsigned char *addr,       // byte pointing to the start of the higher layer (UDP/TCP/ICMPv6/...) header
+               uint16_t len2)                   // htons(..)'d length of the UDP/TCP/ICMPv6/... header
 {
 	uint16_t ulen;
 	uint16_t uproto;
 	uint16_t answer = 0;
-	uint32_t csum =0;
+	uint32_t csum = 0;
 	uint32_t carry;
-        const uint32_t *saddr32 = (const uint32_t *)&saddr->s6_addr[0];
-        const uint32_t *daddr32 = (const uint32_t *)&daddr->s6_addr[0];
+    const uint32_t *saddr32 = (const uint32_t *)&saddr->s6_addr[0];
+    const uint32_t *daddr32 = (const uint32_t *)&daddr->s6_addr[0];
+
+    // Step 1: Calculate 16-bit sum of Pseudo Header. The Psuedo header contains Source IP, Destination IP, Protocol, UDP/TCP/ICMP/... Length (header+body).
 
 	//get the sum of source and destination address
-	for (int i=0; i<4; i++) {
+	for (int i=0; i<4; i++) 
+    {
+        csum += ntohl(saddr32[i]); // TODO why not walk over it from 3 to 0? and then i--? It does not make a different but, doesn't it sound better in one way or an other?
+        carry = (csum < ntohl(saddr32[i]));       // what the heck?            carry is then 1 or 0         , rright ?
+        csum += carry;                            // ^ I don't understand this line
+    }
 
-	  csum += ntohl(saddr32[i]);
-	  carry = (csum < ntohl(saddr32[i]));
-	  csum += carry;
-	}
+	for (int i=0; i<4; i++) 
+    {
+        csum += ntohl(daddr32[i]);
+        carry = (csum < ntohl(daddr32[i]));
+        csum += carry;
+    }
 
-	for (int i=0; i<4; i++) {
-
-	   csum += ntohl(daddr32[i]);
-	   carry = (csum < ntohl(daddr32[i]));
-	   csum += carry;
-	}
-
-	//get the sum of other fields:  packet length, protocal
+	//get the sum of other fields:  packet length, protocol
 	ulen = ntohs(len);
 	csum += ulen;
 
 	uproto = proto;
 	csum += uproto;
 
-	//get the sum of the ICMP6 package
+    // Step 2: Calculate 16-bit sum of UDP/TCP/ICMP Header + Data (excluding checksum)
+
+	//get the sum of the UDP/TCP/ICMP(v6)/... package
 	uint16_t nleft = ntohs(len2);
 	const uint16_t *w = (const uint16_t *)addr;
-	while (nleft > 1)  {
-	    uint16_t w2=*w++;
+	while (nleft > 1)  
+    {
+	    uint16_t w2 = *w++;
 	    csum += ntohs(w2);
-	    nleft -=2;
-	 }
+	    nleft -= 2;
+    }
 
-	 //mop up an odd byte, if necessary
-	  if (nleft == 1) {
-	    *(unsigned char *)(&answer) = *(const unsigned char *)w ;
-	    csum += ntohs(answer);
-	  }
-	  csum -= ntohs(ori_csum); //get rid of the effect of ori_csum in the calculation
+    //mop up an odd byte, if necessary
+    if (nleft == 1) 
+    {
+        *(unsigned char *)(&answer) = *(const unsigned char *)w;
+        csum += ntohs(answer);
+    }
+    csum -= ntohs(ori_csum); //get rid of the effect of ori_csum in the calculation
 
-	  // fold >=32-bit csum to 16-bits
-	  while (csum>>16) {
-	    csum = (csum & 0xffff) + (csum >> 16);
-	  }
+    // fold >=32-bit csum to 16-bits
+    while (csum >> 16)
+    {
+        csum = (csum & 0xffff) + (csum >> 16);
+    }
 
-	  answer = ~csum;          // truncate to 16 bits
-	  return answer;
+    answer = ~csum;          // truncate to 16 bits
+    return answer;
 }
 
 
 //This is the slow way for in6_cksum
 unsigned short
-in6_cksum(const struct in6_addr *saddr,
-	  const struct in6_addr *daddr,
-	  uint16_t len,
-	  uint8_t proto,
-	  uint16_t ori_csum,
-	  unsigned char *addr,
-	  uint16_t len2)
+in6_cksum(const struct in6_addr *saddr, // IPv6 source address of the IPv6 fixed header
+	  const struct in6_addr *daddr,     // IPv6 destination address of the IPv6 fixed header
+	  uint16_t len,                     // Length of the payload
+	  uint8_t proto,                    // Next protocol located in the IPv6 Next Header field 
+	  uint16_t ori_csum,                // original checksum of the higher layer header (that is non-adjusted to the Pseudo Header)
+	  unsigned char *addr,              // byte pointing to the start of the higher layer (UDP/TCP/ICMPv6/...) header
+	  uint16_t len2)                    // htons(..)'d length of the higher layer (UDP/TCP/ICMPv6/...) header
 {
 	uint16_t ulen;
 	uint16_t uproto;
 	uint16_t answer = 0;
 	uint32_t csum =0;
-        const uint16_t *saddr16 = (const uint16_t *)&saddr->s6_addr[0];
-        const uint16_t *daddr16 = (const uint16_t *)&daddr->s6_addr[0];
+    const uint16_t *saddr16 = (const uint16_t *)&saddr->s6_addr[0];
+    const uint16_t *daddr16 = (const uint16_t *)&daddr->s6_addr[0];
+
+    // Step 1: Calculate 16-bit sum of Pseudo Header. The Psuedo header contains Source IP, Destination IP, Protocol, UDP/TCP/ICMP/... Length (header+body).
 
 	//get the sum of source and destination address
-	for (int i=0; i<8; i++) {
-	  csum += ntohs(saddr16[i]);
+	for (int i=0; i<8; i++) 
+    {
+        csum += ntohs(saddr16[i]);
 	}
 
-	for (int i=0; i<8; i++) {
-	   csum += ntohs(daddr16[i]);
+	for (int i=0; i<8; i++) 
+    {
+        csum += ntohs(daddr16[i]);
 	}
 
 	//get the sum of other fields:  packet length, protocal
@@ -298,29 +315,38 @@ in6_cksum(const struct in6_addr *saddr,
 	uproto = proto;
 	csum += uproto;
 
-	//get the sum of the ICMP6 package
-	uint16_t nleft = ntohs(len2);
+    // Step 2: Calculate 16-bit sum of UDP/TCP/ICMP Header + Data (excluding checksum)
+
+	//get the sum of the UDP/TCP/ICMP(v6)/... package
+	uint16_t nleft = ntohs(len2);               // number of bytes left
+    click_chatter("len2 = %i ", len2);
+    click_chatter("ntohs(len2) = %i ", ntohs(len2));
 	const uint16_t *w = (const uint16_t *)addr;
-	while (nleft > 1)  {
-	    uint16_t w2=*w++;
+	while (nleft > 1)
+    {
+        click_chatter("in");
+        uint16_t w2 = *w++;
 	    csum += ntohs(w2);
-	    nleft -=2;
-	 }
+	    nleft -=2;                      
+    }
+    click_chatter("out");
 
-	 //mop up an odd byte, if necessary
-	  if (nleft == 1) {
-	    *(unsigned char *)(&answer) = *(const unsigned char *)w ;
-	    csum += ntohs(answer);
-	  }
-	  csum -= ntohs(ori_csum); //get rid of the effect of ori_csum in the calculation
+    //mop up an odd byte, if necessary
+    if (nleft == 1)
+    {
+        *(unsigned char *)(&answer) = *(const unsigned char *)w;
+        csum += ntohs(answer);
+    }
+    csum -= ntohs(ori_csum);
 
-	  // fold >=32-bit csum to 16-bits
-	  while (csum>>16) {
+    // fold >=32-bit csum to 16-bits
+    while (csum>>16)
+    {
 	    csum = (csum & 0xffff) + (csum >> 16);
-	  }
+    }
 
-	  answer = ~csum;          // truncate to 16 bits
-	  return answer;
+    answer = ~csum;          // truncate to 16 bits
+    return answer;
 }
 
 

@@ -61,8 +61,17 @@ StoreIPAddress::simple_action(Packet *p)
 {
     // XXX error reporting?
     IPAddress ipa = (_use_address ? _address : p->dst_ip_anno());
+    click_chatter("_use_address = %i ", _use_address);
+    click_chatter(" (uint32_t) _offset + 4 = %i", (uint32_t) _offset + 4);
+    click_chatter("p->length() = %i ", p->length());
+    click_chatter("(uint32_t) _offset + 4 <= p->length() = %i", _offset + 4 <= p->length());
+    click_chatter("(ipa || _use_address) = %i", (ipa || _use_address));
+    click_chatter("(ipa || _use_address) && (uint32_t) _offset + 4 <= p->length() = %i", ((ipa || _use_address) && (uint32_t) _offset + 4 <= p->length()));
+
     if ((ipa || _use_address) && (uint32_t) _offset + 4 <= p->length()) {
+        click_chatter("we zitten hier");
 	if (WritablePacket *q = p->uniqueify()) {
+            click_chatter("de offset is %i ", _offset);
 	    memcpy(q->data() + _offset, &ipa, 4);
 	    return q;
 	} else
@@ -72,7 +81,9 @@ StoreIPAddress::simple_action(Packet *p)
 	       && p->ip_header_length() >= sizeof(click_ip)) {
 	// special case: store IP address into IP header
 	// and update checksums incrementally
+        click_chatter("we zitten in de tweede lus");
 	if (WritablePacket *q = p->uniqueify()) {
+            click_chatter("de offset is %i ", _offset);
 	    uint16_t *x = reinterpret_cast<uint16_t *>(q->network_header() - _offset);
 	    uint32_t old_hw = (uint32_t) x[0] + x[1];
 	    old_hw += (old_hw >> 16);

@@ -43,7 +43,7 @@ GetIP6Address::simple_action(Packet *p)
 {
 
   IP6Address dst=IP6Address((unsigned char *)(p->data()+ _offset));
-  SET_DST_IP6_ANNO(p, dst);
+  p->set_dst_ip6_anno(dst);
   return p;
 }
 

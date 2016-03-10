@@ -1,7 +1,7 @@
 /* -*- mode: c; c-basic-offset: 4 -*- */
 #ifndef CLICKNET_ETHER_H
 #define CLICKNET_ETHER_H
-
+#include <stdint.h>
 /*
  * <clicknet/ether.h> -- Ethernet and ARP headers, based on one of the BSDs.
  *

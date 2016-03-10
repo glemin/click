@@ -77,7 +77,7 @@ IP6Encap::simple_action(Packet *p_in)
     WritablePacket *p = p_in->push(sizeof(click_ip6));
     if (!p)
         return 0;
-    const IP6Address &a = DST_IP6_ANNO(p);
+    const IP6Address &a = p->dst_ip6_anno();
 
     click_ip6 *ip6 = reinterpret_cast<click_ip6 *>(p->data());
 
@@ -85,7 +85,7 @@ IP6Encap::simple_action(Packet *p_in)
     if (_use_dst_anno && a)  // use_dst_anno
         ip6->ip6_dst = a;
     else
-        SET_DST_IP6_ANNO(p, ip6->ip6_dst);
+        p->set_dst_ip6_anno(IP6Address(ip6->ip6_dst));
 
     ip6->ip6_plen = htons(p->length() - sizeof(click_ip6));
     p->set_ip6_header(ip6, sizeof(click_ip6));

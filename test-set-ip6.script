@@ -1,0 +1,3 @@
+// test-set-ip6.script
+
+InfiniteSource(LIMIT 5) -> UDPIP6Encap(2001:2001:2001:2001::1, 1234, 2001:2001:2001:2001::2, 1234) -> EtherEncap(0x0800, 00:0a:95:9d:68:16, 00:0a:95:9d:68:17) -> ToDump(test_ip6.dump) -> Discard;

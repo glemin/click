@@ -60,7 +60,7 @@ SetIPECN::simple_action(Packet *p)
 	return 0;
     click_ip *ip = q->ip_header();
     uint16_t old_hw = (reinterpret_cast<uint16_t *>(ip))[0];
-    ip->ip_tos = (ip->ip_tos & IP_DSCPMASK) | _ecn;
+    ip->ip_tos = (ip->ip_tos & IP_DSCPMASK) | _ecn;  // Why does it (if I am not wrong) erase the first 6 TOS bits and set them to 0?????
     click_update_in_cksum(&ip->ip_sum, old_hw, reinterpret_cast<uint16_t *>(ip)[0]);
     return q;
 }

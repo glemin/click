@@ -198,7 +198,7 @@ IP6Filter::Primitive::add_comparison_exprs(Classification::Wordwise::Program &pr
 }
 */
 
-
+        
 Vector<String> separate_text(const String& text) {
     Vector<String> tokenList;
     const char* s = text.data();

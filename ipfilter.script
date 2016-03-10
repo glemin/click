@@ -1,0 +1,11 @@
+// an IPFilter test script
+
+InfiniteSource(LIMIT 5, LENGTH 60) -> UDPIP6Encap(2001:2001:2001:2001::1, 1234, 2001:2001:2001:2001::2, 1234) -> EtherEncap(0x0800, 00:0a:95:9d:68:16, 00:0a:95:9d:68:17) -> filter::IP6Filter(0 ip vers 11, 1 ip vers 12, 2 src host 2001:2001:2001:2501::1, 3 ip vers 6) 
+
+filter[0] -> Print(a) -> IPPrint(a) -> Discard;
+filter[1] -> ToDump("ethernet_pakket.dump") -> Print(b) -> IPPrint(b) -> Discard;
+filter[2] -> Print(c) -> IPPrint(c) -> Discard;
+filter[3] -> Print(d) -> IPPrint(d) -> Discard;
+
+// UDPIPEncap(5.5.5.5, 1234, 9.9.9.9, 1234)
+// UDPIP6Encap(2001:2001:2001:2001::1, 1234, 2001:2001:2001:2001::2, 1234)

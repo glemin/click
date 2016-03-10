@@ -1,7 +1,6 @@
 /* -*- mode: c; c-basic-offset: 4 -*- */
 #ifndef CLICKNET_IP6_H
 #define CLICKNET_IP6_H
-//#include <clicknet/ip.h>
 /* get struct in6_addr */
 #include <click/cxxprotect.h>
 CLICK_CXX_PROTECT
@@ -13,6 +12,7 @@ CLICK_CXX_PROTECT
 # include <netinet/in.h>
 #endif
 
+/* Main/Regular IPv6 Header */
 struct click_ip6 {
     union {
 	struct {
@@ -36,7 +36,26 @@ struct click_ip6 {
 	    unsigned ip6_un3_v : 4;	/*	 version == 6		     */
 #endif
 	} ip6_un3;
-    } ip6_ctlun;
+
+
+        // easy to address version which uses a byte-like access for the first 31 bits in the packet.
+        struct {		
+           uint8_t byte0;		/* 0-3	 version == 6	   		   */
+					/* 4-7	 differentiated service (part 1)   */
+					/*           4-7: DSCP (part 1) 	   */
+
+           uint8_t byte1;		/* 8-11  differentiated service (part 2) */
+					/*	     8-9: DSCP (part 2)          */
+                                        /*           10-11: ECN                  */
+                                        /* 12-15 flow label (part 1)           */
+           uint8_t byte2;           /* 16-23 flow label (part 2)           */
+           uint8_t byte3;           /* 24-31 flow label (part 3)           */
+           uint16_t payload_length; // on bytes 4 and 5
+	       uint8_t next_header;     // on byte 6
+           uint8_t hop_limit;       // on byte 7
+        } alt4;	// fourth alternative way to describe an IPv6 packet
+    } ip6_ctlun;     // this contains the first 8 bytes of the packet, containing a version, traffic class, flow label, payload length and next header.
+                     // it excludes the actual source and destination address.
     struct in6_addr ip6_src;	/* 8-23	 source address */
     struct in6_addr ip6_dst;	/* 24-39 dest address */
 };
@@ -48,6 +67,7 @@ struct click_ip6 {
 #define ip6_nxt			ip6_ctlun.ip6_un1.ip6_un1_nxt
 #define ip6_hlim		ip6_ctlun.ip6_un1.ip6_un1_hlim
 
+// TODO How does this MASK/SHIFT thing work? Can a short tutorial be written about this?
 #define IP6_FLOW_MASK		0x000FFFFFU
 #define IP6_FLOW_SHIFT		0
 #define IP6_CLASS_MASK		0x0FF00000U
@@ -74,6 +94,33 @@ struct click_ip6_fragment {
     uint32_t ip6_frag_id;
 };
 
+/* Extension headers: */
+
+/* Hop-by-Hop Options Header */
+struct click_ip6_hop_header {
+    uint8_t next_header; // type of the next header (e.g. UDP is 17, or Mobility Extension header is 135).
+    uint8_t hdr_ext_len; // length of the Hop-by-Hop Options header in 8-octet units, not including the first 8 octets.
+    uint8_t* options;    // variable length field, of a length such that the complete Hop-by-Hop Options header is an integer multiple of 8 octets long.
+                         // contains one or more TLV-encoded options (see RFC 2460 section 4.2).
+};
+
+/* Routing Header */
+/* The Routing header is used by an IPv6 source to list one or more intermediate nodes to be "visited" on the way to a packet's destination */
+/* The Routing Header is identified by a Next Header value of 43 in the immediately preceding header. */
+struct click_ip6_routing_header {
+    uint8_t next_header; // type of the next header (e.g. UDP is 17, or Mobility Extension header is 135).
+    uint8_t hdr_ext_len; // length of the Hop-by-Hop Options header in 8-octet units, not including the first 8 octets.
+    uint8_t routing_type; // Identifier of a particular Routing header variant.
+    uint8_t segments_left; // Number of route segments remaining, i.e., number of explicitly listed intermediate nodes still to be visited before reaching the final destination.
+    uint8_t* type_specific_data; // Variable-length field, of format determined by the Routing Type, and of length such that the complete Routing header is an integer multiple of 8 octets long.
+};
+
+/* Destination Options Header */
+struct click_ip6_destination_header {
+    uint8_t next_header; // type of the next header (e.g. UDP is 17, or Mobility Extension header is 135).
+    uint8_t hdr_ext_len; // length of the Destination Options header in 8-octet units, not including the first 8 octets.
+    uint8_t* options; // variable-length field, of length such that the complete Destination Options heade ris an integer multiple of 8 octets long. Contains one or more TLV-encoded options, as described in section 4.2.
+};
 
 uint16_t in6_fast_cksum(const struct in6_addr *saddr,
 			const struct in6_addr *daddr,

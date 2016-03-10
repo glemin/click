@@ -1,0 +1,1 @@
+InfiniteSource(LIMIT 4) -> UDPIP6Encap(2000:10:1::2, 1234, 2000:20:1::2, 1234) -> EtherEncap(0x86DD, 00:0a:95:9d:68:16, 00:0a:95:9d:68:17) -> ToDump(bla.dump) -> Discard;

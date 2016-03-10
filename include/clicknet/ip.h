@@ -1,6 +1,7 @@
 /* -*- mode: c; c-basic-offset: 4 -*- */
 #ifndef CLICKNET_IP_H
 #define CLICKNET_IP_H
+
 /* get struct in_addr */
 #include <click/cxxprotect.h>
 CLICK_CXX_PROTECT
@@ -51,7 +52,7 @@ struct click_ip {
     struct in_addr ip_dst;		/* 16-19 destination address	     */
 };
 
-/* ip_protocol */
+/* A list of IANA protocol numbers. They go from 0 to 255. */
 #define IP_PROTO_ICMP		1
 #define IP_PROTO_IGMP		2
 #define IP_PROTO_GGP		3
@@ -101,6 +102,7 @@ struct click_ip {
 #define IP_PROTO_SCTP		132
 #define IP_PROTO_UDPLITE	136
 
+/* A list of unreal non-IANA protocol numbers. They start at 256 and higher. */
 #define IP_PROTO_NONE		257
 #define IP_PROTO_TRANSP		258
 #define IP_PROTO_TCP_OR_UDP	256

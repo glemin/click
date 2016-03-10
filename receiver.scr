@@ -1,0 +1,3 @@
+FromDevice(eth0)
+-> Print("5")
+-> Disccard;

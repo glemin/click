@@ -42,7 +42,7 @@ Packet *
 MarkMACHeader::simple_action(Packet *p)
 {
     if (_length)
-	p->set_mac_header(p->data() + _offset, _length);
+	p->set_mac_header(p->data() + _offset, _length);        // with this function we immediatly set the network header pointer also. The reason we can do this is because we know the length of our MAC header. (and a MAC header in a packet is always right before the network header)
     else
 	p->set_mac_header(p->data() + _offset);
     return p;

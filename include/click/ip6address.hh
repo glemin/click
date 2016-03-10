@@ -5,10 +5,6 @@
 #include <clicknet/ip6.h>
 #include <click/ipaddress.hh>
 #include <click/etheraddress.hh>
-#if !CLICK_TOOL
-# include <click/packet.hh>
-# include <click/packet_anno.hh>
-#endif
 CLICK_DECLS
 
 class IP6Address { public:
@@ -29,26 +25,40 @@ class IP6Address { public:
      *
      * The address has format ::FFFF:@a x. */
     explicit inline IP6Address(IPAddress x) {
-	*this = x;
+	*this = x;		// This is a pointer to a IP6Address class, if we dereference it we get the class itself.
     }
 
     /** @brief Construct an IP6Address from a human-readable string. */
     explicit IP6Address(const String &x);		// "fec0:0:0:1::1"
 
-    /** @brief Construct an IP6Address from a C structure. */
+    /** @brief Construct an IP6Address from an in6_addr */
+
+    /*
+     * The in6_addr struct from #include <linux/in6.h> looks like this:
+     *
+     * struct in6_addr {
+     *          unsigned char   s6_addr[16];    // IPv6 address
+     *      };
+     */
     explicit inline IP6Address(const struct in6_addr &x)
 	: _addr(x) {
     }
 
-    /** @brief Construct an IPv4-Mapped IP6Address from a C structure. */
+    /** @brief Construct an IPv4-Mapped IP6Address from an in_addr */
     explicit inline IP6Address(const struct in_addr &x) {
 	*this = x;
     }
 
     /** @brief Construct an uninitialized IP6Address. */
-    inline IP6Address(const uninitialized_type &unused) {
-	(void) unused;
+    // The regular constructor assigns to our variables a default value (i.e. it initializes them). This constructor can be used if you don't want that to happen and
+    // as such save some memory. This constructor asks as its single argument a dummy struct of type unitialiazed_type which is a struct without methods or variables.
+    // The only reason this dummy struct needs to be passed is to let the compiler now that we want to use the uninitialized version of the constructor and not the
+    // regular one that initializes our variables.
+
+    inline IP6Address(const uninitialized_type &dummy __attribute__((unused))) {
+    	// __attribute__((unused))) is a GNU compiler specific feature that indicates that variable dummy is unused (if not indicated, it would generate a warning).
     }
+
 
     /** @brief Return an IP6Address equal to the prefix mask of length @a
      * prefix_len.
@@ -68,7 +78,7 @@ class IP6Address { public:
      * @sa make_prefix */
     static IP6Address make_inverted_prefix(int prefix_len);
 
-    typedef uint32_t (IP6Address::*unspecified_bool_type)() const;
+    typedef uint32_t (IP6Address::*unspecified_bool_type)() const; // TODO wth is this???
     inline operator unspecified_bool_type() const;
 
     operator const struct in6_addr &() const	{ return _addr; }
@@ -109,17 +119,17 @@ class IP6Address { public:
      * An IPv4-mapped address has format "::w:x:y:z", where the
      * IPv4 address is "w.x.y.z". */
     inline bool is_ip4_compatible() const {
-	return data32()[0] == 0 && data32()[1] == 0
-	    && data32()[2] == 0;
-    }
+	return data32()[0] == 0 && data32()[1] == 0		// first 3 of 4 bytes need to be 0 then (as you can see here)
+	    && data32()[2] == 0;                        // on the last byte, byte 3 we don't need to test anything because
+    }                                               // this byte  is allowed to be anything and contains the actual IPv4 address.
 
     /** @brief Return true iff the address is a IPv4-mapped address.
      *
      * An IPv4-mapped address has format "::FFFF:w:x:y:z", where the
      * embedded IPv4 address is "w.x.y.z". */
     inline bool is_ip4_mapped() const {
-	return data32()[0] == 0 && data32()[1] == 0
-	    && data32()[2] == htonl(0x0000FFFFU);
+	return data32()[0] == 0 && data32()[1] == 0     // here the third byte (byte 2) needs to contain FFFF and and the fourth
+	    && data32()[2] == htonl(0x0000FFFFU);       // byte (byte 3) is again allowed to be anything.
     }
 
     /** @brief Return true iff the address is a multicast address
@@ -127,7 +137,7 @@ class IP6Address { public:
      *
      */
     inline bool is_multicast() const {
-        return _addr.s6_addr[0] == 0xff;
+        return _addr.s6_addr[0] == 0xff;            // in IPv6 we have multicase if the first byte (byte 0), contains the value 0xFF
     }
 
     /** @brief Return true iff the address is a link-local address.
@@ -170,7 +180,7 @@ class IP6Address { public:
 
   private:
 
-    struct in6_addr _addr;
+    struct in6_addr _addr;  // TODO waarom heeft men daar nog eens struct voorgetypt? Is in6_addr van zichzelf al geen struct?
 
 };
 
@@ -208,17 +218,17 @@ operator<<(StringAccum &sa, const IP6Address &a) {
 }
 
 inline bool
-IP6Address::matches_prefix(const IP6Address &addr, const IP6Address &mask) const
+IP6Address::matches_prefix(const IP6Address &addr, const IP6Address &mask) const  // TODO wat doen die addr en mask hier??
 {
     const uint32_t *xi = data32(), *ai = addr.data32(), *mi = mask.data32();
-    return ((xi[0] ^ ai[0]) & mi[0]) == 0
+    return ((xi[0] ^ ai[0]) & mi[0]) == 0						  // if xi and ai differ, then mi needs to be zero, if xi and ai are equal we don't care about mi's value
 	&& ((xi[1] ^ ai[1]) & mi[1]) == 0
 	&& ((xi[2] ^ ai[2]) & mi[2]) == 0
 	&& ((xi[3] ^ ai[3]) & mi[3]) == 0;
 }
 
 inline bool
-IP6Address::mask_as_specific(const IP6Address &mask) const
+IP6Address::mask_as_specific(const IP6Address &mask) const						// TODO wat is dit???
 {
     const uint32_t *xi = data32(), *mi = mask.data32();
     return ((xi[0] & mi[0]) == mi[0] && (xi[1] & mi[1]) == mi[1]
@@ -226,7 +236,7 @@ IP6Address::mask_as_specific(const IP6Address &mask) const
 }
 
 inline IP6Address &
-IP6Address::operator&=(const IP6Address &x)
+IP6Address::operator&=(const IP6Address &x)						// we &= every byte
 {
     uint32_t *ai = data32();
     const uint32_t *bi = x.data32();
@@ -238,7 +248,7 @@ IP6Address::operator&=(const IP6Address &x)
 }
 
 inline IP6Address &
-IP6Address::operator&=(const struct in6_addr &x)
+IP6Address::operator&=(const struct in6_addr &x)				// we &= every byte
 {
     uint32_t *ai = data32();
     const uint32_t *bi = (uint32_t *)&x.s6_addr[0];
@@ -250,7 +260,7 @@ IP6Address::operator&=(const struct in6_addr &x)
 }
 
 inline IP6Address &
-IP6Address::operator|=(const IP6Address &x)
+IP6Address::operator|=(const IP6Address &x)						// we |= every byte
 {
     uint32_t *ai = data32();
     const uint32_t *bi = x.data32();
@@ -262,7 +272,7 @@ IP6Address::operator|=(const IP6Address &x)
 }
 
 inline IP6Address &
-IP6Address::operator|=(const struct in6_addr &x)
+IP6Address::operator|=(const struct in6_addr &x)				// we |= every byte
 {
     uint32_t *ai = data32();
     const uint32_t *bi = (uint32_t *)&x.s6_addr;
@@ -274,7 +284,7 @@ IP6Address::operator|=(const struct in6_addr &x)
 }
 
 inline IP6Address
-operator&(const IP6Address &a, const IP6Address &b)
+operator&(const IP6Address &a, const IP6Address &b)				// we & every byte between those two distinct IP6addresses
 {
     const uint32_t *ai = a.data32(), *bi = b.data32();
     IP6Address result = IP6Address::uninitialized_t();
@@ -287,7 +297,7 @@ operator&(const IP6Address &a, const IP6Address &b)
 }
 
 inline IP6Address
-operator&(const struct in6_addr &a, const IP6Address &b)
+operator&(const struct in6_addr &a, const IP6Address &b)		// we & every byte between those two distinct IP6addresses
 {
     const uint32_t *ai = (const uint32_t *)&a.s6_addr[0], *bi = b.data32();
     IP6Address result = IP6Address::uninitialized_t();
@@ -300,7 +310,7 @@ operator&(const struct in6_addr &a, const IP6Address &b)
 }
 
 inline IP6Address
-operator|(const IP6Address &a, const IP6Address &b)
+operator|(const IP6Address &a, const IP6Address &b)				// we | every byte between those two distinct IP6addresses
 {
     const uint32_t *ai = a.data32(), *bi = b.data32();
     IP6Address result = IP6Address::uninitialized_t();
@@ -313,7 +323,7 @@ operator|(const IP6Address &a, const IP6Address &b)
 }
 
 inline IP6Address
-operator~(const IP6Address &x)
+operator~(const IP6Address &x)									// we ~ every byte
 {
     const uint32_t *ai = x.data32();
     IP6Address result = IP6Address::uninitialized_t();
@@ -326,47 +336,26 @@ operator~(const IP6Address &x)
 }
 
 inline IP6Address &
-IP6Address::operator=(const struct in6_addr &a)
-{
-    _addr = a;
-    return *this;
+IP6Address::operator=(const struct in6_addr &a)					// we assign a in6_addr to this class
+{																// TODO waarom staat er weer struct in6_addr, omvat het type in6_addr zelf al niet dat het om een struct gaat?
+    _addr = a;													// TODO mag je dat er dan nog zo maar voorschrijven? Btw, nu is het zelfs een const struct, wat doet die const daar
+    return *this;												// TODO ook nog is?
 }
 
 inline IP6Address &
-IP6Address::operator=(const struct in_addr &a)
+IP6Address::operator=(const struct in_addr &a)					// we assign a in_addr (which contains an IPv4 address) to this class
 {
-    memset(&_addr, 0, 10);
-    data16()[5] = 0xffff;
-    data32()[3] = a.s_addr;
+    memset(&_addr, 0, 10);										// we set the first 10 bytes to zero
+    data16()[5] = 0xffff;										// we set the 6th 2-byte pair of the total of 8 pairs to FFFF
+    data32()[3] = a.s_addr;										// we put the IPv4 address in the last byte (= byte 3)
     return *this;
 }
 
-inline uint32_t
-IP6Address::hashcode() const
+inline uint32_t													// TODO wth is dit allemaal?? waarvoor gebruiken we het?? be shiften wat in de 3de byte zit allemaal 1 naar links
+IP6Address::hashcode() const									// TODO om daarna de 4de bit bij op te tellen?? waarom doen we dit allemaal??
 {
     return (data32()[2] << 1) + data32()[3];
 }
-
-#if !CLICK_TOOL
-inline const IP6Address &
-DST_IP6_ANNO(Packet *p)
-{
-    return *reinterpret_cast<IP6Address *>(p->anno_u8() + DST_IP6_ANNO_OFFSET);
-}
-
-inline void
-SET_DST_IP6_ANNO(Packet *p, const IP6Address &a)
-{
-    memcpy(p->anno_u8() + DST_IP6_ANNO_OFFSET, a.data(), DST_IP6_ANNO_SIZE);
-}
-
-inline void
-SET_DST_IP6_ANNO(Packet *p, const struct in6_addr &a)
-{
-    memcpy(p->anno_u8() + DST_IP6_ANNO_OFFSET, &a, DST_IP6_ANNO_SIZE);
-}
-#endif
-
 
 /** @class IP6AddressArg
   @brief Parser class for IPv6 addresses. */

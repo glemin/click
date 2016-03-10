@@ -91,7 +91,7 @@ LookupIP6Route::initialize(ErrorHandler *)
 void
 LookupIP6Route::push(int, Packet *p)
 {
-  IP6Address a = DST_IP6_ANNO(p);
+  IP6Address a = p->dst_ip6_anno();
   IP6Address gw;
   int ifi = -1;
 
@@ -99,7 +99,7 @@ LookupIP6Route::push(int, Packet *p)
     if (a == _last_addr     ) {
       if (_last_gw)
 	{
-	    SET_DST_IP6_ANNO(p, _last_gw);
+            p->set_dst_ip6_anno(_last_gw);
 	}
       output(_last_output).push(p);
       return;
@@ -134,7 +134,7 @@ LookupIP6Route::push(int, Packet *p)
     _last_gw = gw;
     _last_output = ifi;
     if (gw != IP6Address("::0")) {
-	SET_DST_IP6_ANNO(p, IP6Address(gw));
+        p->set_dst_ip6_anno(IP6Address(gw));
     }
     output(ifi).push(p);
 
