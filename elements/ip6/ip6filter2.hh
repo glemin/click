@@ -137,22 +137,20 @@ class IP6Filter : public Element { public:
     const char *class_name() const		{ return "IP6Filter"; }
     const char *port_count() const		{ return "1/-"; }
     const char *processing() const		{ return PUSH; }
-    // this element does not need AlignmentInfo; override Classifier's "A" flag
-    const char *flags() const			{ return ""; }              // TODO We hebben schijnbaar geen flags. Wat is eigenlijk zo'n flag en waarvoor dient het?
-    bool can_live_reconfigure() const	{ return true; }            // TODO Wat betekent deze functie? Wat houdt live herconfigureren in?
+    const char *flags() const			{ return ""; }
+    bool can_live_reconfigure() const	        { return false; }
 
-    int configure(Vector<String> &, ErrorHandler *) CLICK_COLD;     // CLICK_COLD is an indication to the compiler that this function is rarely used.
-    void add_handlers() CLICK_COLD;                                 // CLICK_COLD is an indication to the compiler that this function is rarely used.
+    int configure(Vector<String> &, ErrorHandler *) CLICK_COLD; // CLICK_COLD is a GNU compiler instruction indicating this function is rarely used
+    void add_handlers() CLICK_COLD;
 
     void push(int port, Packet *packet);
-
-    typedef Classification::Wordwise::CompressedProgram IPFilterProgram;        // Classification::Wordwise::CompressedProgram   ==   IPFilterProgram
 
     static void parse_program(IPFilterProgram &zprog,
 			      const Vector<String> &conf, int noutputs,
 			      const Element *context, ErrorHandler *errh);
-    static inline int match(const IPFilterProgram &zprog, const Packet *p);
+    int run(const Packet *p);
 
+    String get_user_viewable_instructions(Element *e, void *);
  
     enum {
         // (2) Most of the time (?) or at least often, we have on of these
@@ -172,55 +170,10 @@ class IP6Filter : public Element { public:
                                                 // wat doen we bij minder dan 7 items? => wel we doorlopen gewoon de lijst.
     };
 
-    // TODO
-    // TODO         Een primitive heeft altijd een IP adres als in een PrimitiveData in zich   ............. denk ik => jup is zo, zelfs 2: de _u en de _mask
-    // TODO
-    // Stelt een primitive 1 vd mogelijke volledige flows voor een pkt kan volgen?
-    // Of is een kleinere eenheid binnen een bepaalde flow??
-
-    // hoeveel primitives worden er aangemaakt voor een setup met 3 flows?????
-    // hmmm.. interesting, i want to the answer
-
-    // Resembles a Wireshark Primitive.
-
-
-protected:  // Because it is used by IPClassifier?
-    IPFilterProgram _zprog; // dezen brol moet ge heel low level instructies meegeven! Daarmee wil die gevoed worden en op basis van die low level info kan hij het 'verkeer' regelen, en ieder pakket naar de juiste output loodsen.
-
 private:
- //   tree<NodeItem> nodeItemTree;    // een parse tree
-
-    // is looking something up in the global database of NameInfo, I suppose..........
-    static int lookup(String word, int type, int transp_proto, uint32_t &data, const Element *context, ErrorHandler *errh); // dees zoekt iet op, wa is oek nog ni zu duidelijk
-
-    static int length_checked_match(const IPFilterProgram &zprog, const Packet *p, int packet_length);
-
-    static String program_string(Element *e, void *user_data); // wtf is dit? is dit een string versie van euh... u hele klasse ofzu??? mor iet mottig precies!!!
+    Classification::Wordwise::CompressedProgram instructions;
 };
 
-
-/*
-inline bool
-IP6Filter::Primitive::negation_is_simple() const    // vaag
-{
-    if (_internalPrimitiveType == TYPE_PROTO)
-	    return true;
-    else if (has_transp_proto())            // TODO waarom is hier de negatie moeilijk?   // if it has a transp proto, the the negation is hard, but why?
-	    return false;
-    else
-	    return _internalPrimitiveType == TYPE_HOST || (_internalPrimitiveType & TYPE_FIELD) || _internalPrimitiveType == TYPE_IPFRAG;      // if _internalPrimitiveType is equal to one of those 3 return true, otherwise return false (then we have an unknown _internalPrimitiveType I guess), you need to try them all 3 out if needed
-}
-*/
-
-// TODO
-// TODO     Hier gaat het zprog de in zichzelf opgeslagen zprog boom op de proef gesteld worden
-// TODO     -> pakketten gaan gematcht worden met de boom van zprog hier
-// TODO     => blijkbaar moeten we het data gedeelte schijden van het header gedeelte -> 
-// TODO
-/*
-* Here the real program starts. It will return as a number the port to which the packet needs to be sent to.
-* It expects as arguments the packet to be inspected and some suspicious 'zprog' argument.
-*/
 inline int
 IP6Filter::match(const IPFilterProgram &zprog, const Packet *p)     // wat bevat dat IP filter programma? bevat da nen boom die ge door moet wandelen? En wa voor 1ne just? Nen operatie boom ofzu met & en || tekentjes ofzuiet?? En daartussen dan operaties. Ne soort van parse tree ofzu?? En moet ge daar binair in zoeken?? hmmm da binair zoeken is nog mor wa vreemd!!!
 {

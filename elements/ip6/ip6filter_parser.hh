@@ -17,7 +17,7 @@ public:
 //        this.tokens = tokens;
 //    }
 
-    Parser(const Vector<String> &words, Vector<int> &tree, Classification::Wordwise::Program &prog, const Element *context, ErrorHandler *errh) : _words(words), _tree(tree), _program(prog), _context(context), _errh(errh) { }
+    Parser(const Vector<String> &tokens, Vector<int> &tree, Classification::Wordwise::Program &prog, const Element *context, ErrorHandler *errh) : _words(words), _tree(tree), _program(prog), _context(context), _errh(errh) { }
 
 	enum State {
 	    unknown,
@@ -48,7 +48,7 @@ public:
 
 
 //	void parse_slot(int output, int pos);   // momenteel ongebruikt maar de functionaliteit zit in parse_program
-	int parse();
+	int parse(Classification::Wordwise::Program program, Vector<int> tree, );
 private:
 	const Vector<String> &_words;
 	Vector<int> &_tree;

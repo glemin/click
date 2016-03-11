@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <click/glue.hh>
 #include <click/element.hh>
-#include <click/list.hh>
+#include <click/vector.hh>
 #include <click/string.hh>
 CLICK_DECLS
 
@@ -14,11 +14,15 @@ namespace ip6filter {
 class Lexer {
 public:
     Lexer(const char* text);
-    List<String> lex();
+    Vector<String> lex();
     
 private:
-   const char* text;
+    String text;
 };
 
 }
 }
+
+CLICK_ENDDECLS
+
+#endif

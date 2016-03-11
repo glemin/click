@@ -6,6 +6,9 @@ CLICK_DECLS
 using namespace std;
 using namespace Classification::Wordwise;
 
+namespace click {
+namespace ip6filter {
+
 enum {  /* temporarily */
     // if you change this, change click-fastclassifier.cc also
     offset_mac = 0,
@@ -178,6 +181,9 @@ void UDPPortPrimitive::compile(Program& program, Vector<int> tree) {
 
 void TCPPortPrimitive::compile(Program& program, Vector<int> tree) {
     
+}
+
+}
 }
 
 CLICK_ENDDECLS
