@@ -28,6 +28,17 @@ namespace Wordwise {
 class DominatorOptimizer;
 
 
+
+class Instruction {
+    uint32_t instructionValue;
+    
+    bool is_true (uint32_t instructionValue);      
+    
+};
+
+
+
+
 class Insn {
 public:
     uint16_t offset;

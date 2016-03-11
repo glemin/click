@@ -101,7 +101,7 @@ with IP6Filter.
            // Default-2:
            deny all);
 
-=h program read-only
+=h get_program_as_string read-only
 Returns a human-readable definition of the program the IP6Filter element
 is using to classify packets. At each step in the program, four bytes
 of packet data are ANDed with a mask and compared against four bytes of
@@ -171,7 +171,7 @@ class IP6Filter : public Element { public:
     };
 
 private:
-    Classification::Wordwise::CompressedProgram instructions;
+    Classification::Wordwise::CompressedProgram program;
 };
 
 inline int

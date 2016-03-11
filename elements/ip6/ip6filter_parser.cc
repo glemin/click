@@ -12,7 +12,7 @@ using Classification::Wordwise::Program;
 using std::stack;
 using namespace std;
 
-int Parser::parse_primitive(int position, bool negatedSignSeenBeforePrimitive, Program& compileIntoThisProgram) {
+int PrimitiveParser::parse_primitive(int position, bool negatedSignSeenBeforePrimitive, Program& compileIntoThisProgram) {
 
 //    constexpr int pos = position;
 //    int currentWord = _words[position];
@@ -385,7 +385,10 @@ int Parser::parse() {
  
  
  
-int Parser::parse() {
+int PrimitiveParser::parse(Program program, ErrorHandler* errh) {
+
+
+
     int pos = 1;
 
     Vector<StatePositionPair> statePositionPairList;
@@ -675,4 +678,4 @@ int Parser::parse_expr_iterative(int position) {
 */
 
 CLICK_ENDDECLS
-ELEMENT_PROVIDES(Parser)
+ELEMENT_PROVIDES(PrimitiveParser)

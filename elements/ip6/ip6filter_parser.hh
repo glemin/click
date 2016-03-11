@@ -9,7 +9,7 @@
 #include "elements/standard/classification.hh"
 CLICK_DECLS
 
-class Parser { // ne parser zeker, mor wat diej doe is nog ni zu duidelijk
+class PrimitiveParser { // ne parser zeker, mor wat diej doe is nog ni zu duidelijk
 public:
 //    const Vector<String> &tokens; //  iet van woorde, wa ne const vector just is, weet ek oek ni direct..., wil da zegge da eens da ge diej initiatlized da er geen elementn ni meer kunne toegeveogd worre of is da toch iet anders..
 
@@ -17,7 +17,7 @@ public:
 //        this.tokens = tokens;
 //    }
 
-    Parser(const Vector<String> &tokens, Vector<int> &tree, Classification::Wordwise::Program &prog, const Element *context, ErrorHandler *errh) : _words(words), _tree(tree), _program(prog), _context(context), _errh(errh) { }
+    PrimitiveParser(const Vector<String> &tokens, Vector<int> &tree, Classification::Wordwise::Program &prog, const Element *context, ErrorHandler *errh) : _words(words), _tree(tree), _program(prog), _context(context), _errh(errh) { }
 
 	enum State {
 	    unknown,
@@ -36,7 +36,7 @@ public:
 	    NEGATED_FACTOR1, 
 	    NEGATED_FACTOR2,
 	    
-	    // too special shortcut variables
+	    // two special shortcut variables
 	    FIRST = EXPR0,
 	    LAST = NEGATED_FACTOR2
 	};

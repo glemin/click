@@ -62,8 +62,7 @@ IP6Filter::configure(Vector<String> &conf, ErrorHandler *errh)
             cerrh.error("IPFilter argument number %i only contained one argument and should at least contain a slot token followed by an actual instruction);
         }
         
-        int slot = -1;  // slots isn't set yet
-        
+        int slot = -1;  // slots isn't set yet       
         String slotToken = tokens[0];   // the first token always contains the slot token
         
         // testing the slot token
@@ -76,15 +75,17 @@ IP6Filter::configure(Vector<String> &conf, ErrorHandler *errh)
         }
 
         // slot token test succeeded so we can go further
-	    prog.start_subtree(tree);
+	    program.start_subtree(tree);    // internal subtree structure is an array and we "need to help this function" from the outside, since it is not self contained
 	    
 	    // check whether the fake condition "-" was found that matches everything
 	    if (words.size() == 2 && tokens[1] == "-") {
-	        prog.add_insn(tree, 0, 0, 0);       // a fake condition that matches everything
+	        program.add_insn(tree, 0, 0, 0);       // a fake condition that matches everything
 	    }
 	    
 	    Parser parser(tokens);
-	    parser.parse(
+	    parser.parse(program, tree, errh);
+	    
+	    
 	    
 	    
 
@@ -184,13 +185,19 @@ IP6Filter::get_user_viewable_instructions(Element *e, void *)
 void
 IP6Filter::add_handlers()
 {
-    add_read_handler("program", get_user_viewable_instructions);
+    add_read_handler("get_program_as_string", get_user_viewable_instructions);
 }
 
 void
 IP6Filter::push(int, Packet *packet)
 {
-    checked_output_push(this->run(packet), packet);
+    this->run(packet);
+}
+
+void
+IP6Filter::run() {
+
+
 }
 
 CLICK_ENDDECLS
